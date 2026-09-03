@@ -1,0 +1,82 @@
+import { Alert } from '../types';
+
+export const INITIAL_ALERTS: Alert[] = [
+  {
+    id: 'alt-001',
+    hazard: 'FLOOD',
+    level: 'CRITICAL',
+    severity: 'CRITICAL',
+    title: 'FLASH FLOOD EMERGENCY — CENTRAL UNDERPASS',
+    message: 'Water level exceeded 110cm with rainfall intensity at 62mm/h. Immediate underpass closure required.',
+    locationName: 'Central Underpass & Metro Boulevard Basin',
+    coordinates: [12.9735, 77.5985],
+    timestamp: new Date().toISOString(),
+    source: 'Risk Engine / SN-CU-02 Anomaly',
+    confidence: 0.94,
+    acknowledged: false,
+    affectedZoneId: 'zone-flood-a'
+  },
+  {
+    id: 'alt-002',
+    hazard: 'LANDSLIDE',
+    level: 'CRITICAL',
+    severity: 'CRITICAL',
+    title: 'CRITICAL SLOPE INSTABILITY — NORTH RIDGE',
+    message: 'Soil moisture saturation hit 94.8%. High probability of slope slip over West Terrace runout.',
+    locationName: 'North Ridge Escarpment Crest',
+    coordinates: [12.9920, 77.5880],
+    timestamp: new Date(Date.now() - 15 * 60000).toISOString(),
+    source: 'Geotechnical Engine / SN-RV-06',
+    confidence: 0.89,
+    acknowledged: false,
+    affectedZoneId: 'zone-landslide-a'
+  },
+  {
+    id: 'alt-003',
+    hazard: 'HEAT',
+    level: 'WARNING',
+    severity: 'HIGH',
+    title: 'EXTREME HEATWAVE ADVISORY — INDUSTRIAL ZONE',
+    message: 'Ambient temperature reached 43.8°C with 0.0% canopy cover. Cooling centers activated.',
+    locationName: 'East Industrial Corridor',
+    coordinates: [12.9620, 77.6200],
+    timestamp: new Date(Date.now() - 40 * 60000).toISOString(),
+    source: 'Thermal Sensor Network / SN-IZ-05',
+    confidence: 0.88,
+    acknowledged: true,
+    acknowledgedAt: new Date(Date.now() - 25 * 60000).toISOString(),
+    acknowledgedBy: 'Duty Officer Alpha',
+    affectedZoneId: 'zone-heat-a'
+  },
+  {
+    id: 'alt-004',
+    hazard: 'FLOOD',
+    level: 'WARNING',
+    severity: 'HIGH',
+    title: 'DOWNSTREAM FLOOD PREDICTION — EAST CANAL',
+    message: 'Risk Engine predicts water level rise to Critical in Downstream Canal Corridor within 45-60 minutes.',
+    locationName: 'Downstream East Canal Corridor',
+    coordinates: [12.9700, 77.6110],
+    timestamp: new Date(Date.now() - 10 * 60000).toISOString(),
+    source: 'Predictive Hydro-Model v2.1',
+    confidence: 0.84,
+    acknowledged: false,
+    affectedZoneId: 'zone-flood-b'
+  },
+  {
+    id: 'alt-005',
+    hazard: 'STORM',
+    level: 'ADVISORY',
+    severity: 'MODERATE',
+    title: 'SQUALL LINE APPROACHING SOUTH SECTOR',
+    message: 'Wind gusts up to 68 km/h recorded near South Transport Hub. Barometric pressure 998.5 hPa.',
+    locationName: 'South Transport Corridor',
+    coordinates: [12.9550, 77.6000],
+    timestamp: new Date(Date.now() - 65 * 60000).toISOString(),
+    source: 'Met Tower Telemetry',
+    confidence: 0.91,
+    acknowledged: true,
+    acknowledgedAt: new Date(Date.now() - 50 * 60000).toISOString(),
+    acknowledgedBy: 'Ops Center Bravo'
+  }
+];
