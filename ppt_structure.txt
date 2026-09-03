@@ -1,0 +1,230 @@
+--- Slide 1 ---
+Shape 0 (Google Shape;12;p1): 
+Shape 3 (Google Shape;15;p1): THE FLAGSHIP MIC HACKATHON OF TECHNOVIT
+Shape 4 (Google Shape;16;p1): IDEA SUBMISSION — TEMPLATE
+Shape 5 (Google Shape;17;p1): 
+Shape 6 (Google Shape;18;p1): RECURSION
+Shape 7 (Google Shape;19;p1): 
+Shape 8 (Google Shape;20;p1): EDITION II
+Shape 9 (Google Shape;21;p1): 
+Shape 14 (Google Shape;26;p1): to understand recursion, first understand recursion
+Shape 15 (Google Shape;27;p1): 
+Shape 16 (Google Shape;28;p1): 
+Shape 17 (Google Shape;29;p1): PROJECT TITLE
+Shape 18 (Google Shape;30;p1): [ Your Project Title Goes Here ]
+Shape 20 (Google Shape;32;p1): 
+Shape 21 (Google Shape;33;p1): ONE-LINE PITCH
+Shape 22 (Google Shape;34;p1): [ One sentence: what it is and who it's for. ]
+Shape 24 (Google Shape;36;p1): 
+Shape 25 (Google Shape;37;p1): TRACK
+Shape 26 (Google Shape;38;p1): [ Selected Track ]
+Shape 28 (Google Shape;40;p1): 
+Shape 29 (Google Shape;41;p1): TEAM
+Shape 30 (Google Shape;42;p1): [ Team Name ]
+Shape 32 (Google Shape;44;p1): [ Name ]
+Shape 33 (Google Shape;45;p1): [ Name ]
+Shape 34 (Google Shape;46;p1): [ Name ]
+Shape 35 (Google Shape;47;p1): [ Name ]
+Shape 36 (Google Shape;48;p1): [ Name ]
+Shape 38 (Google Shape;50;p1): full contact sheet → frame 09
+Shape 39 (Google Shape;51;p1): 
+Shape 41 (Google Shape;53;p1): FRAME 01 / 09
+Shape 42 (Google Shape;54;p1): 
+Shape 43 (Google Shape;55;p1): 01
+--- Slide 2 ---
+Shape 0 (Google Shape;61;p2): 
+Shape 3 (Google Shape;64;p2): RECURSION - EDITION II
+Shape 4 (Google Shape;65;p2): 
+Shape 5 (Google Shape;66;p2): 02
+Shape 7 (Google Shape;68;p2): TECHNOVIT'S FLAGSHIP HACKATHON
+Shape 8 (Google Shape;69;p2): FRAME 02 / 09
+Shape 9 (Google Shape;70;p2): PROBLEM DEFINITION
+Shape 10 (Google Shape;71;p2): answer in 2–3 lines · readable outside your track
+Shape 11 (Google Shape;72;p2): 
+Shape 12 (Google Shape;73;p2): 
+Shape 13 (Google Shape;74;p2): 01
+Shape 14 (Google Shape;75;p2): WHO & HOW OFTEN
+Shape 15 (Google Shape;76;p2): [ Who feels this pain, and how often do they feel it? ]
+Shape 16 (Google Shape;77;p2): 
+Shape 17 (Google Shape;78;p2): 
+Shape 18 (Google Shape;79;p2): 02
+Shape 19 (Google Shape;80;p2): TODAY'S WORKAROUND
+Shape 20 (Google Shape;81;p2): [ How is this handled today, without your solution? ]
+Shape 21 (Google Shape;82;p2): 
+Shape 22 (Google Shape;83;p2): 
+Shape 23 (Google Shape;84;p2): 03
+Shape 24 (Google Shape;85;p2): WHY IT FALLS SHORT
+Shape 25 (Google Shape;86;p2): [ Why does that current approach fall short? ]
+Shape 26 (Google Shape;87;p2): 
+Shape 27 (Google Shape;88;p2): 
+Shape 28 (Google Shape;89;p2): 04
+Shape 29 (Google Shape;90;p2): EVIDENCE
+Shape 30 (Google Shape;91;p2): [ What evidence shows this problem is real? Data, quotes, sources. ]
+--- Slide 3 ---
+Shape 0 (Google Shape;97;p3): 
+Shape 3 (Google Shape;100;p3): RECURSION — EDITION II
+Shape 4 (Google Shape;101;p3): 
+Shape 5 (Google Shape;102;p3): 03
+Shape 7 (Google Shape;104;p3): TECHNOVIT'S FLAGSHIP HACKATHON
+Shape 8 (Google Shape;105;p3): FRAME 03 / 09
+Shape 9 (Google Shape;106;p3): PROPOSED SOLUTION
+Shape 10 (Google Shape;107;p3): name it plainly · connect straight back to frame 02
+Shape 11 (Google Shape;108;p3): 
+Shape 12 (Google Shape;109;p3): PRODUCT / SYSTEM NAME
+Shape 13 (Google Shape;110;p3): [ Product / System Name ]
+Shape 15 (Google Shape;112;p3): [ Plain-language description: what it does, in one or two sentences. ]
+Shape 16 (Google Shape;113;p3): 
+Shape 19 (Google Shape;116;p3): 
+Shape 20 (Google Shape;117;p3): 
+Shape 21 (Google Shape;118;p3): 01
+Shape 22 (Google Shape;119;p3): WHAT A USER DOES
+Shape 23 (Google Shape;120;p3): [ The concrete steps a user takes with it. ]
+Shape 24 (Google Shape;121;p3): 
+Shape 25 (Google Shape;122;p3): 
+Shape 26 (Google Shape;123;p3): 02
+Shape 27 (Google Shape;124;p3): WHY IT BEATS THE WORKAROUND
+Shape 28 (Google Shape;125;p3): [ What's better than today's alternative, concretely. ]
+Shape 29 (Google Shape;126;p3): 
+Shape 30 (Google Shape;127;p3): 
+Shape 31 (Google Shape;128;p3): 03
+Shape 32 (Google Shape;129;p3): WHAT'S GENUINELY DIFFERENT
+Shape 33 (Google Shape;130;p3): [ Your actual point of difference — be specific. ]
+--- Slide 4 ---
+Shape 0 (Google Shape;136;p4): 
+Shape 3 (Google Shape;139;p4): RECURSION — EDITION II
+Shape 4 (Google Shape;140;p4): 
+Shape 5 (Google Shape;141;p4): 04
+Shape 7 (Google Shape;143;p4): TECHNOVIT'S FLAGSHIP HACKATHON
+Shape 8 (Google Shape;144;p4): FRAME 04 / 09
+Shape 9 (Google Shape;145;p4): SYSTEM ARCHITECTURE
+Shape 10 (Google Shape;146;p4): walk the full flow · name real services & models
+Shape 11 (Google Shape;147;p4): 
+Shape 12 (Google Shape;148;p4): FIG. 04-A — SYSTEM FLOW
+Shape 13 (Google Shape;149;p4): 
+Shape 14 (Google Shape;150;p4): USER INPUT
+Shape 16 (Google Shape;152;p4): 
+Shape 17 (Google Shape;153;p4): [ FRONTEND ]
+Shape 19 (Google Shape;155;p4): 
+Shape 20 (Google Shape;156;p4): [ API / BACKEND ]
+Shape 22 (Google Shape;158;p4): 
+Shape 23 (Google Shape;159;p4): [ MODEL / AWS SERVICE ]
+Shape 25 (Google Shape;161;p4): 
+Shape 26 (Google Shape;162;p4): OUTPUT
+Shape 27 (Google Shape;163;p4): ↑ replace with your real architecture diagram
+Shape 28 (Google Shape;164;p4): 
+Shape 29 (Google Shape;165;p4): 
+Shape 30 (Google Shape;166;p4): 01
+Shape 31 (Google Shape;167;p4): KEY TECHNICAL DECISION
+Shape 32 (Google Shape;168;p4): [ The decision, and why you made it. ]
+Shape 33 (Google Shape;169;p4): 
+Shape 34 (Google Shape;170;p4): 
+Shape 35 (Google Shape;171;p4): 02
+Shape 36 (Google Shape;172;p4): HARDEST PART TO BUILD
+Shape 37 (Google Shape;173;p4): [ What was genuinely hard, and how you solved it. ]
+Shape 38 (Google Shape;174;p4): 
+Shape 39 (Google Shape;175;p4): 
+Shape 40 (Google Shape;176;p4): 03
+Shape 41 (Google Shape;177;p4): HOW YOU KNOW IT WORKS
+Shape 42 (Google Shape;178;p4): [ Tests or evaluations you ran. ]
+--- Slide 5 ---
+Shape 0 (Google Shape;184;p5): 
+Shape 3 (Google Shape;187;p5): RECURSION — EDITION II
+Shape 4 (Google Shape;188;p5): 
+Shape 5 (Google Shape;189;p5): 05
+Shape 7 (Google Shape;191;p5): TECHNOVIT'S FLAGSHIP HACKATHON
+Shape 8 (Google Shape;192;p5): FRAME 05 / 09
+Shape 9 (Google Shape;193;p5): FEASIBILITY & SCOPE
+Shape 10 (Google Shape;194;p5): a working slice with a known limit beats an over-promised demo
+Shape 11 (Google Shape;195;p5): 
+Shape 12 (Google Shape;196;p5): 
+Shape 13 (Google Shape;197;p5): 01
+Shape 14 (Google Shape;198;p5): SCOPE
+Shape 15 (Google Shape;199;p5): In:  [ what's in scope ]
+Shape 16 (Google Shape;200;p5): Out:  [ what's explicitly not ]
+Shape 17 (Google Shape;201;p5): 
+Shape 18 (Google Shape;202;p5): 
+Shape 19 (Google Shape;203;p5): 02
+Shape 20 (Google Shape;204;p5): RUNNING COST
+Shape 21 (Google Shape;205;p5): [ What it costs to run — compute, APIs, storage. ]
+Shape 22 (Google Shape;206;p5): 
+Shape 23 (Google Shape;207;p5): 
+Shape 24 (Google Shape;208;p5): 03
+Shape 25 (Google Shape;209;p5): RISKS & FALLBACK
+Shape 26 (Google Shape;210;p5): [ What could break, and your fallback plan. ]
+Shape 27 (Google Shape;211;p5): 
+Shape 28 (Google Shape;212;p5): 
+Shape 29 (Google Shape;213;p5): 04
+Shape 30 (Google Shape;214;p5): AFTER THE HACKATHON
+Shape 31 (Google Shape;215;p5): [ Where this goes next — roadmap. ]
+--- Slide 6 ---
+Shape 0 (Google Shape;221;p6): 
+Shape 3 (Google Shape;224;p6): RECURSION — EDITION II
+Shape 4 (Google Shape;225;p6): 
+Shape 5 (Google Shape;226;p6): 06
+Shape 7 (Google Shape;228;p6): TECHNOVIT'S FLAGSHIP HACKATHON
+Shape 8 (Google Shape;229;p6): FRAME 06 / 09
+Shape 9 (Google Shape;230;p6): IMPACT METRICS
+Shape 10 (Google Shape;231;p6): show how the figure was measured, an estimate is fine
+Shape 11 (Google Shape;232;p6): [ 00% ]
+Shape 12 (Google Shape;233;p6): [ one line: what this figure means ]
+Shape 13 (Google Shape;234;p6): 
+Shape 14 (Google Shape;235;p6): HOW IT WAS MEASURED
+Shape 15 (Google Shape;236;p6): [ show your working — estimate is acceptable ]
+Shape 16 (Google Shape;237;p6): 
+Shape 17 (Google Shape;238;p6): 
+Shape 18 (Google Shape;239;p6): 01
+Shape 19 (Google Shape;240;p6): WHAT MEASURABLY IMPROVES
+Shape 20 (Google Shape;241;p6): [ The concrete before/after change. ]
+Shape 21 (Google Shape;242;p6): 
+Shape 22 (Google Shape;243;p6): 
+Shape 23 (Google Shape;244;p6): 02
+Shape 24 (Google Shape;245;p6): WHO ELSE COULD USE IT
+Shape 25 (Google Shape;246;p6): [ Other beneficiaries beyond your primary user. ]
+Shape 26 (Google Shape;247;p6): 
+Shape 27 (Google Shape;248;p6): 
+Shape 28 (Google Shape;249;p6): 03
+Shape 29 (Google Shape;250;p6): WHAT COULD GO WRONG / BE MISUSED
+Shape 30 (Google Shape;251;p6): [ Realistic misuse or failure case. ]
+Shape 31 (Google Shape;252;p6): 
+Shape 32 (Google Shape;253;p6): 
+Shape 33 (Google Shape;254;p6): 04
+Shape 34 (Google Shape;255;p6): HOW YOU'D HANDLE THAT
+Shape 35 (Google Shape;256;p6): [ Your mitigation for the above. ]
+--- Slide 7 ---
+Shape 0 (Google Shape;262;p7): 
+Shape 3 (Google Shape;265;p7): RECURSION — EDITION II
+Shape 4 (Google Shape;266;p7): 
+Shape 5 (Google Shape;267;p7): 07
+Shape 7 (Google Shape;269;p7): TECHNOVIT'S FLAGSHIP HACKATHON
+Shape 8 (Google Shape;270;p7): FRAME 07 / 09
+Shape 9 (Google Shape;271;p7): REFERENCES & ATTRIBUTION
+Shape 10 (Google Shape;272;p7): one source per line · uncredited work is disqualifying
+Shape 11 (Google Shape;273;p7): TABLE 07-A — SOURCES & LICENCES
+Shape 12 (Google Shape;274;p7): 
+--- Slide 8 ---
+Shape 0 (Google Shape;281;p8): 
+Shape 3 (Google Shape;284;p8): RECURSION — EDITION II
+Shape 4 (Google Shape;285;p8): 
+Shape 5 (Google Shape;286;p8): 08
+Shape 7 (Google Shape;288;p8): TECHNOVIT'S FLAGSHIP HACKATHON
+Shape 8 (Google Shape;289;p8): FRAME 08 / 09
+Shape 9 (Google Shape;290;p8): EXTRA SLIDE
+Shape 10 (Google Shape;291;p8): 
+Shape 11 (Google Shape;292;p8): [ optional space · demo link · screenshots · github · qr code ]
+Shape 12 (Google Shape;293;p8): 
+Shape 15 (Google Shape;296;p8): 
+Shape 16 (Google Shape;297;p8): BEFORE YOU SUBMIT \n [ ] every bracket filled \n [ ] diagram replaced \n [ ] all sources credited
+--- Slide 9 ---
+Shape 0 (Google Shape;303;p9): 
+Shape 3 (Google Shape;306;p9): RECURSION — EDITION II
+Shape 4 (Google Shape;307;p9): 
+Shape 5 (Google Shape;308;p9): 09
+Shape 7 (Google Shape;310;p9): TECHNOVIT'S FLAGSHIP HACKATHON
+Shape 8 (Google Shape;311;p9): FRAME 09 / 09
+Shape 9 (Google Shape;312;p9): TEAM & CONTACT
+Shape 10 (Google Shape;313;p9): one line per member · so organisers can reach you after submission
+Shape 11 (Google Shape;314;p9): [ Team Name ]
+Shape 12 (Google Shape;315;p9): TABLE 09-A — TEAM CONTACT SHEET
+Shape 13 (Google Shape;316;p9): 
+Shape 15 (Google Shape;318;p9): 
+Shape 16 (Google Shape;319;p9): 

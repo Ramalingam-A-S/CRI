@@ -1,0 +1,82 @@
+{
+  "VIT Chennai_Chennai Airport": {
+    "origin": "VIT Chennai",
+    "destination": "Chennai Airport",
+    "distance_m": 27500,
+    "duration_s": 3600,
+    "geometry": [
+      [
+        80.1534,
+        12.8406
+      ],
+      [
+        80.1111,
+        12.8888
+      ],
+      [
+        80.165,
+        12.98
+      ]
+    ]
+  },
+  "VIT Chennai_Tambaram": {
+    "origin": "VIT Chennai",
+    "destination": "Tambaram",
+    "distance_m": 15000,
+    "duration_s": 1800,
+    "geometry": [
+      [
+        80.1534,
+        12.8406
+      ],
+      [
+        80.1444,
+        12.9111
+      ],
+      [
+        80.11,
+        12.92
+      ]
+    ]
+  },
+  "VIT Chennai_Velachery": {
+    "origin": "VIT Chennai",
+    "destination": "Velachery",
+    "distance_m": 22000,
+    "duration_s": 2700,
+    "geometry": [
+      [
+        80.1534,
+        12.8406
+      ],
+      [
+        80.2,
+        12.9
+      ],
+      [
+        80.22,
+        12.98
+      ]
+    ]
+  },
+  "VIT Chennai_Guindy": {
+    "origin": "VIT Chennai",
+    "destination": "Guindy",
+    "distance_m": 26000,
+    "duration_s": 3200,
+    "geometry": [
+      [
+        80.1534,
+        12.8406
+      ],
+      [
+        80.21,
+        12.95
+      ],
+      [
+        80.215,
+        13.0
+      ]
+    ]
+  }
+}

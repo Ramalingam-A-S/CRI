@@ -1,0 +1,1 @@
+{"features": ["windSpeed", "pressure", "pressure_trend_3h", "predicted_rainfall_ml", "humidity", "historical_hotspot_risk"], "note": "SYNTHETIC PROTOTYPE"}

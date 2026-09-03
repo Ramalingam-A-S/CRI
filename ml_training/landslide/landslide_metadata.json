@@ -1,0 +1,1 @@
+{"features": ["rainfall_24h", "rainfall_72h", "predicted_rainfall_ml", "soil_moisture", "slope", "elevation", "vegetation_cover", "historical_hotspot_risk"], "note": "SYNTHETIC PROTOTYPE"}

@@ -1,0 +1,1 @@
+{"features": ["temperature", "humidity", "predicted_temp_ml", "predicted_humidity_ml", "solar_exposure", "building_density", "vegetation_cover", "historical_hotspot_risk"], "note": "SYNTHETIC PROTOTYPE"}

@@ -1,0 +1,18 @@
+================================================================================
+                   WEATHER PREDICTION MODEL EVALUATION REPORT
+================================================================================
+Model Architecture : MultiOutputRegressor(HistGradientBoostingRegressor)
+Training Dataset   : weather_prediction_dataset.csv (3653 records)
+Holdout Strategy   : Strict Chronological Split (Train: 2000-2007, Test: 2008-2009)
+Training Samples   : 2922 samples
+Holdout Samples    : 731 samples
+Timestamp          : 2026-09-03T16:09:52Z
+--------------------------------------------------------------------------------
+Target Variable           R^2 Score    RMSE         MAE          Units
+--------------------------------------------------------------------------------
+BASEL_temp_mean           0.9538       1.5806       1.2387       degC
+BASEL_precipitation       0.0162       0.5545       0.2919       cm
+BASEL_humidity            0.5520       0.0674       0.0522       fraction_0_to_1
+--------------------------------------------------------------------------------
+OVERALL AVERAGE           0.5073       0.7342       0.5276      
+================================================================================

@@ -1,0 +1,15 @@
+{
+    "model_type": "RandomForestRegressor (SYNTHETIC PROTOTYPE)",
+    "features": [
+        "rainfall_1h",
+        "rainfall_accumulation_24h",
+        "predicted_rainfall_ml",
+        "elevation",
+        "slope",
+        "water_proximity",
+        "soil_moisture",
+        "historical_hotspot_risk"
+    ],
+    "target": "flood_risk_score",
+    "note": "This model is trained on SYNTHETIC data because no real-world flood dataset is available in the workspace. It demonstrates the architecture but does not predict real-world disasters."
+}
