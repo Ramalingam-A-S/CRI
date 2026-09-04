@@ -2,6 +2,7 @@
 backend/api/simulation.py - Dynamic Disaster Simulation & Directional Hazard-Propagation API
 """
 import os
+import math
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -26,6 +27,23 @@ from ml.propagation_formula import (
 )
 
 router = APIRouter(prefix="/api")
+
+def project_bearing_coord(lat: float, lng: float, bearing_deg: float, distance_km: float = 5.5) -> List[float]:
+    """Forward Great Circle coordinate projection along a given bearing angle."""
+    R = 6371.0
+    r_lat = math.radians(lat)
+    r_lng = math.radians(lng)
+    r_b = math.radians(bearing_deg)
+    d_r = distance_km / R
+    p_lat = math.asin(
+        math.sin(r_lat) * math.cos(d_r) +
+        math.cos(r_lat) * math.sin(d_r) * math.cos(r_b)
+    )
+    p_lng = r_lng + math.atan2(
+        math.sin(r_b) * math.sin(d_r) * math.cos(r_lat),
+        math.cos(d_r) - math.sin(r_lat) * math.sin(p_lat)
+    )
+    return [round(math.degrees(p_lat), 5), round(math.degrees(p_lng), 5)]
 
 # Lazy-load trained directional propagation model
 _propagation_model = None
@@ -238,9 +256,91 @@ def run_directed_simulation(req: DirectedSimulationRequest):
             "isDirectional": physics.get("isDirectional", True)
         })
 
-    # Sort descending by probability
+    # 1. Sort descending by probability and deduplicate by target coordinates and bearing angle
     ranked_candidates.sort(key=lambda c: c["probability"], reverse=True)
-    top_candidates = ranked_candidates[:3]
+    deduped_candidates = []
+    seen_targets = []
+    seen_bearings = []
+
+    for c in ranked_candidates:
+        target = c["cone"]["target"]
+        bearing = c["bearingDeg"]
+        is_dup = False
+        for st in seen_targets:
+            d = calculate_haversine_distance_km(target[0], target[1], st[0], st[1])
+            if d < 0.4:
+                is_dup = True
+                break
+        for sb in seen_bearings:
+            diff, _ = calculate_angular_alignment(bearing, sb)
+            if diff < 15.0:
+                is_dup = True
+                break
+        if not is_dup:
+            deduped_candidates.append(c)
+            seen_targets.append(target)
+            seen_bearings.append(bearing)
+
+    top_candidates = deduped_candidates[:3]
+
+    # 2. Comprehensive 360-degree Directional Spectrum Calculation (all 8 cardinal & intercardinal directions)
+    principal_directions = [
+        ("N", 0.0), ("NE", 45.0), ("E", 90.0), ("SE", 135.0),
+        ("S", 180.0), ("SW", 225.0), ("W", 270.0), ("NW", 315.0)
+    ]
+
+    directional_spectrum = []
+    effective_speed = max(5.0, wind_speed)
+
+    for label, b_deg in principal_directions:
+        ang_diff, _ = calculate_angular_alignment(b_deg, prop_bearing)
+        # Western sector (220 - 315 deg) borders steep Nagalapuram mountain ridge
+        dir_slope = 22.0 if 220 <= b_deg <= 315 else 3.0
+        compat = 0.90 if ang_diff < 45 else (0.65 if ang_diff < 90 else 0.35)
+
+        dir_prob = 22.0
+        if model is not None:
+            try:
+                feat_df = pd.DataFrame([{
+                    "angular_diff": ang_diff,
+                    "distance_km": 5.5,
+                    "compatibility_score": compat,
+                    "rainfall": rainfall,
+                    "wind_speed": wind_speed,
+                    "terrain_slope": dir_slope
+                }])
+                dir_prob = float(model.predict(feat_df)[0])
+            except Exception:
+                dir_prob = max(10.0, 100.0 - (ang_diff * 0.45) - 10.0)
+        else:
+            dir_prob = max(10.0, 100.0 - (ang_diff * 0.45) - 10.0)
+
+        dir_prob = min(100.0, max(5.0, round(dir_prob * mode_multiplier * s_quality, 1)))
+
+        risk_level = "CRITICAL" if dir_prob >= 70 else ("HIGH" if dir_prob >= 50 else ("MODERATE" if dir_prob >= 30 else "LOW"))
+        target_pt = project_bearing_coord(s_lat, s_lng, b_deg, 5.5)
+        eta_min = max(1, round((5.5 / effective_speed) * 60))
+        eta_str = f"~{eta_min}m" if eta_min < 60 else f"~{round(eta_min / 60, 1)}h"
+
+        directional_spectrum.append({
+            "direction": label,
+            "bearingDeg": b_deg,
+            "probability": dir_prob,
+            "riskLevel": risk_level,
+            "targetCoord": target_pt,
+            "distanceKm": 5.5,
+            "etaText": eta_str,
+            "etaMinutes": eta_min,
+            "isPrimary": False,
+            "isSecondary": False
+        })
+
+    # Sort directional spectrum descending by ML probability
+    directional_spectrum.sort(key=lambda d: d["probability"], reverse=True)
+    if directional_spectrum:
+        directional_spectrum[0]["isPrimary"] = True
+    if len(directional_spectrum) > 1:
+        directional_spectrum[1]["isSecondary"] = True
 
     base_confidence = 0.90 if op_mode == OperatingMode.CLOUD else (0.65 if op_mode == OperatingMode.LOCAL_EDGE else 0.40)
     overall_confidence = round(base_confidence * s_quality, 2)
@@ -256,6 +356,7 @@ def run_directed_simulation(req: DirectedSimulationRequest):
         "windDirectionDeg": wind_deg,
         "propagationBearingDeg": prop_bearing,
         "rankedCandidates": top_candidates,
+        "directionalSpectrum": directional_spectrum,
         "predictions": top_candidates,
         "coneGeometry": [c["cone"] for c in top_candidates if "cone" in c],
         "mode": op_mode.value,

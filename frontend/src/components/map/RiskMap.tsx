@@ -126,6 +126,23 @@ const createImpactZoneIcon = (color: string, isPrimary: boolean) => {
   });
 };
 
+// Tactical Forecast Ray Terminal Label Icon
+const createDirectionalTagIcon = (label: string, prob: number) => {
+  const color = prob >= 70 ? '#F43F5E' : (prob >= 50 ? '#FB923C' : (prob >= 30 ? '#38BDF8' : '#64748B'));
+  return L.divIcon({
+    className: 'custom-dir-ray-icon',
+    html: `
+      <div style="background: rgba(11, 15, 25, 0.94); border: 1px solid ${color}; color: ${color}; padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 8.5px; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.8); pointer-events: none; transform: translate(-50%, -50%); display: flex; items-center; gap: 3px;">
+        <span style="display:inline-block; width:4px; height:4px; border-radius:50%; background:${color};"></span>
+        <span>${label}</span>
+        <span style="color:#F8FAFC;">${prob}%</span>
+      </div>
+    `,
+    iconSize: [58, 18],
+    iconAnchor: [29, 9]
+  });
+};
+
 // Geodesic Hazard Dispersion Swath Wedge Calculator
 const computeConePolygon = (origin: [number, number], target: [number, number], spreadDeg = 14): [number, number][] => {
   const dLat = target[0] - origin[0];
@@ -591,13 +608,43 @@ export const RiskMap: React.FC = () => {
           );
         })}
 
-        {/* Directional Hazard Propagation Vectors, Cones, Impact Zones & Traveling Twister Vortex */}
+        {/* 1. 360-Degree Directional Forecast Radar Rays (Every Possible Direction) */}
+        {directedResult?.directionalSpectrum?.map((dir: any) => {
+          const origin: [number, number] = directedResult.sourceSensor?.coordinates || REGION_CENTER;
+          const target: [number, number] = dir.targetCoord || REGION_CENTER;
+          const prob = dir.probability;
+          const isPrimary = dir.isPrimary;
+          const isSecondary = dir.isSecondary;
+          const isHigh = prob >= 50;
+          const rayColor = isPrimary ? '#F43F5E' : (isSecondary ? '#FB923C' : (prob >= 30 ? '#0284C7' : '#334155'));
+
+          return (
+            <React.Fragment key={`dir-spectrum-${dir.direction}`}>
+              <Polyline
+                positions={[origin, target]}
+                pathOptions={{
+                  color: rayColor,
+                  weight: isPrimary ? 2.5 : (isSecondary ? 2.0 : 1.0),
+                  dashArray: isPrimary ? '10, 6' : (isHigh ? '6, 6' : '3, 6'),
+                  opacity: isPrimary ? 0.95 : (isHigh ? 0.75 : 0.35)
+                }}
+                interactive={false}
+              />
+              <Marker
+                position={target}
+                icon={createDirectionalTagIcon(dir.direction, prob)}
+                interactive={false}
+              />
+            </React.Fragment>
+          );
+        })}
+
+        {/* 2. Hotspot Candidate Trajectory Vectors, Dispersion Cones & Impact Zones */}
         {directedResult?.rankedCandidates?.map((cand: any, idx: number) => {
           const origin: [number, number] = directedResult.sourceSensor?.coordinates || REGION_CENTER;
           const target: [number, number] = cand.cone?.target || REGION_CENTER;
           const candColor = idx === 0 ? '#F43F5E' : (idx === 1 ? '#FB923C' : '#FBBF24');
           const conePolygon = computeConePolygon(origin, target, idx === 0 ? 14 : 10);
-          const twisterDuration = idx === 0 ? 3600 : (idx === 1 ? 4400 : 5200);
 
           return (
             <React.Fragment key={`sim-prop-${cand.hotspotId}`}>
@@ -645,21 +692,84 @@ export const RiskMap: React.FC = () => {
                 icon={createImpactZoneIcon(candColor, idx === 0)}
                 interactive={false}
               />
-
-              {/* Active Traveling Twister / Vortex Hazard Front (Render for top 2 candidates) */}
-              {idx < 2 && (
-                <TravelingTwisterMarker
-                  origin={origin}
-                  target={target}
-                  cand={cand}
-                  color={candColor}
-                  rank={idx}
-                  durationMs={twisterDuration}
-                />
-              )}
             </React.Fragment>
           );
         })}
+
+        {/* 3. Guaranteed Divergent Traveling Twister Vortexes (Never On The Same Line) */}
+        {(() => {
+          if (!directedResult) return null;
+          const origin: [number, number] = directedResult.sourceSensor?.coordinates || REGION_CENTER;
+          const candidates = directedResult.rankedCandidates || [];
+          const spectrum = directedResult.directionalSpectrum || [];
+
+          // Primary Twister: follows top candidate or top directional vector
+          const primaryCand = candidates[0] || (spectrum[0] ? {
+            name: `${spectrum[0].direction} Primary Front`,
+            probability: spectrum[0].probability,
+            etaText: spectrum[0].etaText,
+            bearingDeg: spectrum[0].bearingDeg,
+            cone: { target: spectrum[0].targetCoord }
+          } : null);
+
+          if (!primaryCand) return null;
+          const primaryTarget: [number, number] = primaryCand.cone?.target || REGION_CENTER;
+          const primaryBearing = primaryCand.bearingDeg || 0;
+
+          // Secondary Twister: MUST diverge by at least 20 degrees from primary path
+          let secondaryCand = candidates.slice(1).find((c: any) => {
+            const diff = Math.abs((c.bearingDeg || 0) - primaryBearing);
+            const normDiff = Math.min(diff, 360 - diff);
+            return normDiff >= 20.0;
+          });
+
+          if (!secondaryCand && spectrum.length > 0) {
+            // Pick the best directional spectrum vector that diverges by at least 30 degrees
+            const divergentDir = spectrum.find((d: any) => {
+              const diff = Math.abs((d.bearingDeg || 0) - primaryBearing);
+              const normDiff = Math.min(diff, 360 - diff);
+              return normDiff >= 30.0;
+            }) || spectrum[1];
+
+            if (divergentDir) {
+              secondaryCand = {
+                name: `${divergentDir.direction} Drift Flank`,
+                probability: divergentDir.probability,
+                etaText: divergentDir.etaText,
+                bearingDeg: divergentDir.bearingDeg,
+                cone: { target: divergentDir.targetCoord }
+              };
+            }
+          }
+
+          const secondaryTarget: [number, number] = secondaryCand?.cone?.target || REGION_CENTER;
+
+          return (
+            <>
+              {/* Primary Twister Vortex Front (Rose/Red) */}
+              <TravelingTwisterMarker
+                origin={origin}
+                target={primaryTarget}
+                cand={primaryCand}
+                color="#F43F5E"
+                rank={0}
+                durationMs={3600}
+              />
+
+              {/* Secondary Divergent Twister Vortex Front (Orange - Distinct Heading) */}
+              {secondaryCand && (
+                <TravelingTwisterMarker
+                  origin={origin}
+                  target={secondaryTarget}
+                  cand={secondaryCand}
+                  color="#FB923C"
+                  rank={1}
+                  durationMs={4500}
+                />
+              )}
+            </>
+          );
+        })()}
 
         {/* Placed Sensors Markers */}
         {sensors.map(s => {
