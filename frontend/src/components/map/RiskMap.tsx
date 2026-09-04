@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -33,6 +33,220 @@ const createSensorIcon = (color: string = '#10B981') => {
     iconSize: [34, 34],
     iconAnchor: [17, 17]
   });
+};
+
+// Tactical Twister / Vortex DivIcon with multi-ring counter-rotating SVG spirals & HUD badge
+const createTwisterDivIcon = (color: string, cand: any, rank: number) => {
+  const label = cand.name || `Hotspot #${rank + 1}`;
+  const prob = cand.probability || 95;
+  const eta = cand.etaText || '~10m';
+
+  return L.divIcon({
+    className: 'custom-twister-icon',
+    html: `
+      <div style="position: relative; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <!-- Top HUD Label Tag -->
+        <div style="position: absolute; top: -26px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: rgba(11, 15, 25, 0.95); border: 1px solid ${color}; color: #F8FAFC; padding: 2px 8px; border-radius: 9999px; font-family: monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 14px rgba(0,0,0,0.8); pointer-events: none; z-index: 100;">
+          <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${color}; box-shadow: 0 0 6px ${color}; animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
+          <span style="color: #F1F5F9; max-width: 90px; overflow: hidden; text-overflow: ellipsis;">${label}</span>
+          <span style="color: ${color}; font-weight: 900;">${prob}%</span>
+          <span style="color: #FBBF24; font-size: 9px;">${eta}</span>
+        </div>
+
+        <!-- Atmospheric Swirl Shockwave Ring -->
+        <div style="position: absolute; width: 64px; height: 64px; border-radius: 50%; border: 1.5px solid ${color}; opacity: 0.45; animation: ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+
+        <!-- Primary Outer Spiral Arms (Spin Clockwise) -->
+        <div style="position: absolute; width: 54px; height: 54px; animation: spin-twister 1.4s linear infinite; color: ${color}; pointer-events: none;">
+          <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" style="width: 100%; height: 100%; filter: drop-shadow(0 0 8px ${color});">
+            <path d="M 50 8 A 42 42 0 0 1 92 50 A 28 28 0 0 1 64 78 A 16 16 0 0 1 50 50" stroke-width="5" stroke-linecap="round" opacity="0.95" />
+            <path d="M 50 92 A 42 42 0 0 1 8 50 A 28 28 0 0 1 36 22 A 16 16 0 0 1 50 50" stroke-width="5" stroke-linecap="round" opacity="0.95" />
+            <circle cx="92" cy="50" r="4" fill="${color}" />
+            <circle cx="8" cy="50" r="4" fill="${color}" />
+            <circle cx="50" cy="8" r="3" fill="#FFFFFF" />
+            <circle cx="50" cy="92" r="3" fill="#FFFFFF" />
+          </svg>
+        </div>
+
+        <!-- Inner Counter-Rotating Vortex Spiral Core -->
+        <div style="position: absolute; width: 38px; height: 38px; animation: spin-twister-reverse 0.85s linear infinite; color: #FFFFFF; pointer-events: none;">
+          <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" style="width: 100%; height: 100%; filter: drop-shadow(0 0 10px ${color});">
+            <path d="M 22 22 Q 50 10 78 22 Q 70 50 50 50 Q 30 50 22 22 Z" fill="${color}" fill-opacity="0.35" stroke="currentColor" stroke-width="3" />
+            <path d="M 28 48 Q 50 36 72 48 Q 62 72 50 78 Q 38 72 28 48 Z" fill="${color}" fill-opacity="0.45" stroke="currentColor" stroke-width="2.5" />
+          </svg>
+        </div>
+
+        <!-- Center Tornado Eye / Glowing Funnel -->
+        <div style="position: relative; width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle, #FFFFFF 15%, ${color} 85%); box-shadow: 0 0 16px ${color}, 0 0 28px ${color}; display: flex; align-items: center; justify-content: center; z-index: 5;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#0B0F19" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="width: 15px; height: 15px;">
+            <path d="M4 8h16" />
+            <path d="M6 12h12" />
+            <path d="M8.5 16h7" />
+            <path d="M10.5 20h3" />
+          </svg>
+        </div>
+      </div>
+    `,
+    iconSize: [70, 70],
+    iconAnchor: [35, 35]
+  });
+};
+
+// Trailing vortex debris particle dot
+const createTrailDivIcon = (color: string, size: number, opacity: number) => {
+  return L.divIcon({
+    className: 'custom-twister-trail-icon',
+    html: `
+      <div style="width: ${size}px; height: ${size}px; border-radius: 50%; background: ${color}; opacity: ${opacity}; box-shadow: 0 0 ${size * 1.5}px ${color}; animation: vortex-core-pulse 1s infinite alternate;"></div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  });
+};
+
+// Landfall Impact Target Radar Beacon
+const createImpactZoneIcon = (color: string, isPrimary: boolean) => {
+  const size = isPrimary ? 54 : 44;
+  return L.divIcon({
+    className: 'custom-impact-zone-icon',
+    html: `
+      <div style="position: relative; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+        <div class="animate-impact-wave" style="position: absolute; width: ${size - 4}px; height: ${size - 4}px; border-radius: 50%; border: 2px solid ${color};"></div>
+        <div style="position: absolute; width: ${size - 12}px; height: ${size - 12}px; border-radius: 50%; border: 2px dashed ${color}; animation: spin-twister 5s linear infinite; opacity: 0.85;"></div>
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: ${color}; border: 2px solid #FFFFFF; box-shadow: 0 0 14px ${color}; z-index: 2;"></div>
+        ${isPrimary ? `
+          <div style="position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); background: rgba(15, 23, 42, 0.92); border: 1px solid ${color}; color: ${color}; font-family: monospace; font-size: 9px; font-weight: 800; padding: 1px 6px; border-radius: 4px; white-space: nowrap; box-shadow: 0 4px 10px rgba(0,0,0,0.7);">
+            🎯 LANDFALL IMPACT
+          </div>
+        ` : ''}
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  });
+};
+
+// Geodesic Hazard Dispersion Swath Wedge Calculator
+const computeConePolygon = (origin: [number, number], target: [number, number], spreadDeg = 14): [number, number][] => {
+  const dLat = target[0] - origin[0];
+  const dLng = target[1] - origin[1];
+  const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+  if (dist === 0) return [origin, target, target];
+  const angle = Math.atan2(dLng, dLat);
+  const spreadRad = (spreadDeg * Math.PI) / 180;
+  const len = dist * 1.06;
+
+  const leftLat = origin[0] + len * Math.cos(angle - spreadRad);
+  const leftLng = origin[1] + len * Math.sin(angle - spreadRad);
+
+  const rightLat = origin[0] + len * Math.cos(angle + spreadRad);
+  const rightLng = origin[1] + len * Math.sin(angle + spreadRad);
+
+  return [origin, [leftLat, leftLng], target, [rightLat, rightLng]];
+};
+
+// 60-FPS Traveling Twister Marker Component
+interface TravelingTwisterProps {
+  origin: [number, number];
+  target: [number, number];
+  cand: any;
+  color: string;
+  rank: number;
+  durationMs?: number;
+}
+
+const TravelingTwisterMarker: React.FC<TravelingTwisterProps> = ({
+  origin,
+  target,
+  cand,
+  color,
+  rank,
+  durationMs = 3800
+}) => {
+  const markerRef = useRef<L.Marker | null>(null);
+  const trail1Ref = useRef<L.Marker | null>(null);
+  const trail2Ref = useRef<L.Marker | null>(null);
+  const trail3Ref = useRef<L.Marker | null>(null);
+
+  const twisterIcon = useMemo(() => createTwisterDivIcon(color, cand, rank), [color, cand, rank]);
+  const trail1Icon = useMemo(() => createTrailDivIcon(color, 16, 0.70), [color]);
+  const trail2Icon = useMemo(() => createTrailDivIcon(color, 12, 0.45), [color]);
+  const trail3Icon = useMemo(() => createTrailDivIcon(color, 8, 0.25), [color]);
+
+  useEffect(() => {
+    let animId: number;
+    let start: number | null = null;
+
+    const animate = (timestamp: number) => {
+      if (!start) start = timestamp;
+      const elapsed = timestamp - start;
+      const progress = (elapsed % durationMs) / durationMs;
+
+      const curLat = origin[0] + progress * (target[0] - origin[0]);
+      const curLng = origin[1] + progress * (target[1] - origin[1]);
+
+      if (markerRef.current) {
+        markerRef.current.setLatLng([curLat, curLng]);
+      }
+
+      const p1 = Math.max(0, progress - 0.03);
+      if (trail1Ref.current) {
+        trail1Ref.current.setLatLng([
+          origin[0] + p1 * (target[0] - origin[0]),
+          origin[1] + p1 * (target[1] - origin[1])
+        ]);
+      }
+
+      const p2 = Math.max(0, progress - 0.06);
+      if (trail2Ref.current) {
+        trail2Ref.current.setLatLng([
+          origin[0] + p2 * (target[0] - origin[0]),
+          origin[1] + p2 * (target[1] - origin[1])
+        ]);
+      }
+
+      const p3 = Math.max(0, progress - 0.09);
+      if (trail3Ref.current) {
+        trail3Ref.current.setLatLng([
+          origin[0] + p3 * (target[0] - origin[0]),
+          origin[1] + p3 * (target[1] - origin[1])
+        ]);
+      }
+
+      animId = requestAnimationFrame(animate);
+    };
+
+    animId = requestAnimationFrame(animate);
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [origin[0], origin[1], target[0], target[1], durationMs]);
+
+  return (
+    <>
+      <Marker ref={trail3Ref} position={origin} icon={trail3Icon} interactive={false} />
+      <Marker ref={trail2Ref} position={origin} icon={trail2Icon} interactive={false} />
+      <Marker ref={trail1Ref} position={origin} icon={trail1Icon} interactive={false} />
+      <Marker ref={markerRef} position={origin} icon={twisterIcon} zIndexOffset={2000}>
+        <Popup>
+          <div className="p-1 space-y-1 font-mono text-xs text-slate-100 min-w-[210px]">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-1">
+              <span className="font-bold text-xs" style={{ color }}>🌪️ PREDICTED HAZARD FRONT</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold">
+                RANK #{rank + 1}
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-300 space-y-0.5">
+              <div>Destination: <strong className="text-slate-100">{cand.name}</strong></div>
+              <div>ML Probability: <strong style={{ color }}>{cand.probability}%</strong></div>
+              <div>Estimated Arrival: <strong className="text-amber-300">{cand.etaText || 'Imminent'}</strong></div>
+              <div>Distance: <span className="text-slate-200">{cand.distanceKm} km</span> | Bearing: <span className="text-slate-200">{cand.bearingDeg}°</span></div>
+            </div>
+          </div>
+        </Popup>
+      </Marker>
+    </>
+  );
 };
 
 // Map Click Handler Component
@@ -377,24 +591,72 @@ export const RiskMap: React.FC = () => {
           );
         })}
 
-        {/* Directional Hazard Propagation Vectors & Cones (Task 6 & 7) */}
+        {/* Directional Hazard Propagation Vectors, Cones, Impact Zones & Traveling Twister Vortex */}
         {directedResult?.rankedCandidates?.map((cand: any, idx: number) => {
-          const origin = directedResult.sourceSensor?.coordinates || REGION_CENTER;
-          const target = cand.cone?.target || REGION_CENTER;
+          const origin: [number, number] = directedResult.sourceSensor?.coordinates || REGION_CENTER;
+          const target: [number, number] = cand.cone?.target || REGION_CENTER;
           const candColor = idx === 0 ? '#F43F5E' : (idx === 1 ? '#FB923C' : '#FBBF24');
+          const conePolygon = computeConePolygon(origin, target, idx === 0 ? 14 : 10);
+          const twisterDuration = idx === 0 ? 3600 : (idx === 1 ? 4400 : 5200);
 
           return (
             <React.Fragment key={`sim-prop-${cand.hotspotId}`}>
-              {/* Center Vector Line */}
+              {/* Geodesic Hazard Dispersion Swath Wedge */}
+              <Polygon
+                positions={conePolygon}
+                pathOptions={{
+                  fillColor: candColor,
+                  fillOpacity: idx === 0 ? 0.08 : 0.04,
+                  stroke: true,
+                  color: candColor,
+                  weight: 1,
+                  dashArray: '4, 4',
+                  opacity: 0.4
+                }}
+                interactive={false}
+              />
+
+              {/* Underlying Glowing Ambient Conduit Track */}
+              <Polyline
+                positions={[origin, target]}
+                pathOptions={{
+                  color: candColor,
+                  weight: idx === 0 ? 9 : 5,
+                  opacity: 0.24,
+                  lineCap: 'round'
+                }}
+              />
+
+              {/* High-Tech Animated Flowing Laser Pulse Vector */}
               <Polyline
                 positions={[origin, target]}
                 pathOptions={{
                   color: candColor,
                   weight: idx === 0 ? 3.5 : 2,
-                  dashArray: '8, 6',
+                  dashArray: '10, 8',
+                  className: 'hazard-vector-flow',
                   opacity: 0.95
                 }}
               />
+
+              {/* Landfall Impact Target Radar Beacon at predicted hotspot */}
+              <Marker
+                position={target}
+                icon={createImpactZoneIcon(candColor, idx === 0)}
+                interactive={false}
+              />
+
+              {/* Active Traveling Twister / Vortex Hazard Front (Render for top 2 candidates) */}
+              {idx < 2 && (
+                <TravelingTwisterMarker
+                  origin={origin}
+                  target={target}
+                  cand={cand}
+                  color={candColor}
+                  rank={idx}
+                  durationMs={twisterDuration}
+                />
+              )}
             </React.Fragment>
           );
         })}

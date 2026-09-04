@@ -26,9 +26,9 @@ class AlertEngine:
             "riskScore": 62.0,
             "confidence": 0.50,
             "location": {
-                "name": "Velachery Low Basin",
-                "latitude": 12.9780,
-                "longitude": 80.2210
+                "name": "Sadasiva Sankarapuram Drainage Basin",
+                "latitude": 13.3860,
+                "longitude": 79.7980
             },
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "reason": "Elevated rainfall accumulation in drainage channel.",

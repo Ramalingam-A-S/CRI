@@ -24,26 +24,26 @@ class IncidentCommand:
         # Default Shelters
         shelters_list = [
             {
-                "id": "shl_velachery_community",
-                "name": "Velachery Community Disaster Relief Shelter",
-                "latitude": 12.9720,
-                "longitude": 80.2180,
+                "id": "shl_nagalapuram_community",
+                "name": "Nagalapuram Community Disaster Relief Shelter",
+                "latitude": 13.3850,
+                "longitude": 79.7990,
                 "capacity": 800,
                 "currentOccupancy": 120,
                 "status": "OPEN",
                 "suppliesStatus": "ADEQUATE",
-                "contactNumber": "+91-44-2244-9900"
+                "contactNumber": "+91-877-2244-9900"
             },
             {
-                "id": "shl_guindy_stadium",
-                "name": "Guindy Indoor Emergency Center",
-                "latitude": 13.0067,
-                "longitude": 80.2020,
+                "id": "shl_sankarapuram_school",
+                "name": "Sankarapuram Emergency High School Center",
+                "latitude": 13.3880,
+                "longitude": 79.7960,
                 "capacity": 1500,
                 "currentOccupancy": 340,
                 "status": "OPEN",
                 "suppliesStatus": "HIGH",
-                "contactNumber": "+91-44-2244-8811"
+                "contactNumber": "+91-877-2244-8811"
             }
         ]
         for s in shelters_list:
@@ -52,21 +52,21 @@ class IncidentCommand:
         # Default Infrastructure Nodes
         infra_list = [
             {
-                "id": "inf_velachery_substation",
-                "name": "Velachery 230kV Power Substation",
+                "id": "inf_sankarapuram_substation",
+                "name": "Sankarapuram 33kV Power Substation",
                 "type": "POWER",
-                "latitude": 12.9750,
-                "longitude": 80.2240,
+                "latitude": 13.3840,
+                "longitude": 79.7970,
                 "status": "OPERATIONAL",
                 "criticalLevel": "HIGH",
                 "hazardExposure": "FLOOD"
             },
             {
-                "id": "inf_chennai_general_hospital",
-                "name": "District General Hospital",
+                "id": "inf_nagalapuram_phc",
+                "name": "Nagalapuram Primary Health Centre",
                 "type": "MEDICAL",
-                "latitude": 12.9810,
-                "longitude": 80.2190,
+                "latitude": 13.3870,
+                "longitude": 79.8010,
                 "status": "OPERATIONAL",
                 "criticalLevel": "CRITICAL",
                 "hazardExposure": "MULTI"
