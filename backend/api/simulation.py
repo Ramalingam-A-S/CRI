@@ -215,6 +215,11 @@ def run_directed_simulation(req: DirectedSimulationRequest):
             "distanceKm": dist_km
         }
 
+        # Calculate Estimated Time of Arrival (ETA) based on distance and advection speed
+        effective_speed = max(5.0, wind_speed) if physics.get("isDirectional", True) else 15.0
+        eta_minutes = max(1, round((dist_km / effective_speed) * 60))
+        eta_text = f"~{eta_minutes}m" if eta_minutes < 60 else f"~{round(eta_minutes / 60, 1)}h"
+
         ranked_candidates.append({
             "hotspotId": hs["id"],
             "name": hs.get("name") or hs.get("title") or "Hotspot",
@@ -224,6 +229,8 @@ def run_directed_simulation(req: DirectedSimulationRequest):
             "bearing": bearing_deg,
             "bearingDeg": bearing_deg,
             "distanceKm": dist_km,
+            "etaMinutes": eta_minutes,
+            "etaText": eta_text,
             "slopeDeg": h_slope,
             "elevationM": h_elev,
             "factors": physics["factors"],

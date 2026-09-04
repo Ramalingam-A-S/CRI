@@ -325,7 +325,8 @@ export const SimulationPage: React.FC = () => {
 
                     <div className="flex items-center justify-between text-[10px] text-slate-400">
                       <span>Bearing: <strong className="text-slate-200">{cand.bearingDeg}°</strong></span>
-                      <span>Distance: <strong className="text-slate-200">{cand.distanceKm} km</strong></span>
+                      <span>Dist: <strong className="text-slate-200">{cand.distanceKm}km</strong></span>
+                      {cand.etaText && <span>ETA: <strong className="text-amber-300">{cand.etaText}</strong></span>}
                       <span className="uppercase text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-300">{cand.hazardTag}</span>
                     </div>
 
