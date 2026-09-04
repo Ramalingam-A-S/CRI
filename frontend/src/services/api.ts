@@ -9,3 +9,4 @@ export const config: ApiConfig = {
 };
 
 export const API_MODE = config.mode;
+export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDr4hoCuwuPf6glQMDSy04RVhppIKFt5CI';

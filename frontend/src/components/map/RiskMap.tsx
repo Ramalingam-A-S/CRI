@@ -123,9 +123,9 @@ export const RiskMap: React.FC = () => {
         style={{ width: '100%', height: '100%', background: '#070B14' }}
         zoomControl={false}
       >
-        {/* CartoDB Dark Matter Tile Layer (Matches Image 1) */}
+        {/* High-Resolution Dark Matter Tile Layer (Clean, No Watermark) */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png"
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={19}
         />
