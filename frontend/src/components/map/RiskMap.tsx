@@ -123,10 +123,10 @@ export const RiskMap: React.FC = () => {
         style={{ width: '100%', height: '100%', background: '#070B14' }}
         zoomControl={false}
       >
-        {/* High-Resolution Dark Matter Tile Layer (Clean, No Watermark) */}
+        {/* High-Resolution Tactical Dark Map (Powered by OpenStreetMap + CSS Dark Matter Filter) */}
         <TileLayer
-          url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png"
-          subdomains={['a', 'b', 'c', 'd']}
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           maxZoom={19}
         />
 
