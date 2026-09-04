@@ -123,11 +123,15 @@ export const RiskMap: React.FC = () => {
         style={{ width: '100%', height: '100%', background: '#070B14' }}
         zoomControl={false}
       >
-        {/* High-Resolution Tactical Dark Map (Powered by OpenStreetMap + CSS Dark Matter Filter) */}
+        {/* Native Dark Slate Basemap (Esri Dark Gray Canvas - Zero Rate Limits, No Blackspots, No Watermarks) */}
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          maxZoom={19}
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+          attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
+          maxZoom={16}
+        />
+        <TileLayer
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+          maxZoom={16}
         />
 
         {/* Spatial Risk Polygons */}

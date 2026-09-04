@@ -33,7 +33,7 @@
 }
 
 .leaflet-tile-pane {
-  filter: brightness(0.6) invert(1) contrast(2.5) hue-rotate(200deg);
+  /* Native dark tiles render without CSS distortion */
 }
 
 .leaflet-popup-content-wrapper {
