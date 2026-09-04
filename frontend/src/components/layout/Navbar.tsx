@@ -1,87 +1,201 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { SystemMode } from '../../types';
-import { AlertTriangle, Activity, Wifi, ShieldAlert, Cpu, Radio, Zap } from 'lucide-react';
+import { 
+  Activity, 
+  Cloud, 
+  Cpu, 
+  AlertTriangle, 
+  WifiOff, 
+  RotateCw,
+  Map,
+  SlidersHorizontal,
+  ShieldAlert,
+  Radio,
+  Settings
+} from 'lucide-react';
 
-export const Navbar: React.FC = () => {
-  const { mode, setMode, assessment, alerts, sensors } = useApp();
+export type TabType = 'map' | 'simulation' | 'response' | 'sensors' | 'admin';
+
+interface NavbarProps {
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
+  const { mode, setMode, assessment, alerts } = useApp();
 
   const activeAlertsCount = alerts.filter(a => !a.acknowledged).length;
-  const onlineSensorsCount = sensors.filter(s => s.status === 'ONLINE').length;
-  const totalSensorsCount = sensors.length;
+  const topAlert = alerts.find(a => !a.acknowledged) || alerts[0];
 
-  const modeColors: Record<SystemMode, { bg: string; border: string; text: string; label: string }> = {
-    CLOUD: { bg: 'bg-cyan-950/60', border: 'border-cyan-500/40', text: 'text-cyan-400', label: 'CLOUD INFERENCE MODE' },
-    LOCAL_EDGE: { bg: 'bg-emerald-950/60', border: 'border-emerald-500/40', text: 'text-emerald-400', label: 'LOCAL EDGE ACTIVE' },
-    DEGRADED: { bg: 'bg-amber-950/60', border: 'border-amber-500/40', text: 'text-amber-400', label: 'DEGRADED DATA MODE' },
-    NO_DATA: { bg: 'bg-rose-950/60', border: 'border-rose-500/40', text: 'text-rose-400', label: 'NO DATA (LAST KNOWN)' }
+  const handleRefresh = async () => {
+    window.location.reload();
   };
 
-  const currentModeStyle = modeColors[mode];
-
   return (
-    <header className="h-16 bg-[#0E1526]/90 backdrop-blur border-b border-slate-800/80 px-4 flex items-center justify-between text-xs z-30 shrink-0 select-none">
-      {/* Brand Title */}
-      <div className="flex items-center space-x-3">
-        <div className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/10">
-          <ShieldAlert className="w-5 h-5 animate-pulse" />
+    <header className="bg-[#090E17] border-b border-slate-800 text-slate-100 shrink-0 select-none z-30">
+      {/* Top Header Row */}
+      <div className="h-16 px-5 flex items-center justify-between">
+        {/* Left: Branding */}
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/10">
+            <Activity className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h1 className="font-black text-sm tracking-wider text-white">
+                C.R.I. COMMAND CENTER
+              </h1>
+              <span className="text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 px-2 py-0.5 rounded-full">
+                v1.0 REALIGNED
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium">
+              Hyperlocal Multi-Hazard Risk Intelligence & Disaster Response
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-bold text-sm text-slate-100 tracking-wide flex items-center space-x-2">
-            <span>HYPERLOCAL CLIMATE RISK-TO-ACTION</span>
-            <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-500/30 font-mono">T1-PROTOTYPE</span>
-          </h1>
-          <p className="text-[10px] text-slate-400">Emergency Operations Command Center & Resilient Edge Platform</p>
-        </div>
-      </div>
 
-      {/* System Status Indicators */}
-      <div className="flex items-center space-x-4">
-        {/* Overall System Risk Badge */}
-        {assessment && (
-          <div className="flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-lg">
-            <span className="text-slate-400 font-medium">OVERALL RISK:</span>
-            <span className={`font-mono font-bold text-sm px-2 py-0.5 rounded ${
-              assessment.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-              assessment.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
-              assessment.severity === 'MODERATE' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-              'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-            }`}>
-              {assessment.riskScore}/100 ({assessment.severity})
+        {/* Center: Inline Live Alert Banner */}
+        {topAlert && (
+          <div className="hidden lg:flex items-center space-x-2 px-3.5 py-1.5 rounded-xl border border-red-500/40 bg-red-950/40 text-red-200 text-xs font-mono shadow-md shadow-red-950/50 max-w-xl truncate">
+            <span className="text-red-400 font-bold uppercase tracking-wider">
+              [{topAlert.severity}] {topAlert.hazard}:
+            </span>
+            <span className="truncate text-slate-300">
+              {topAlert.message || 'Elevated risk detected in active sector.'}
             </span>
           </div>
         )}
 
-        {/* Sensor Network Status */}
-        <div className="flex items-center space-x-2 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300">
-          <Radio className="w-3.5 h-3.5 text-cyan-400" />
-          <span>SENSORS:</span>
-          <span className="font-mono font-semibold text-slate-100">{onlineSensorsCount}/{totalSensorsCount} ONLINE</span>
-        </div>
+        {/* Right: Operating Mode Selector & Refresh */}
+        <div className="flex items-center space-x-2">
+          <div className="bg-slate-950/80 border border-slate-800 p-1 rounded-xl flex items-center space-x-1 text-xs font-mono font-semibold">
+            <button
+              onClick={() => setMode('CLOUD')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                mode === 'CLOUD'
+                  ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Cloud className="w-3.5 h-3.5" />
+              <span>CLOUD</span>
+            </button>
 
-        {/* Active Alerts Count */}
-        <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg border font-medium ${
-          activeAlertsCount > 0 ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 animate-pulse' : 'bg-slate-900/80 border-slate-800 text-slate-400'
-        }`}>
-          <AlertTriangle className="w-3.5 h-3.5" />
-          <span>ALERTS:</span>
-          <span className="font-mono font-bold">{activeAlertsCount} ACTIVE</span>
-        </div>
+            <button
+              onClick={() => setMode('LOCAL_EDGE')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                mode === 'LOCAL_EDGE'
+                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              <span>LOCAL EDGE</span>
+            </button>
 
-        {/* System Mode Switcher Dropdown */}
-        <div className={`flex items-center space-x-2 border px-3 py-1.5 rounded-lg font-mono text-xs ${currentModeStyle.bg} ${currentModeStyle.border} ${currentModeStyle.text}`}>
-          <Cpu className="w-3.5 h-3.5" />
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value as SystemMode)}
-            className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer pr-1"
+            <button
+              onClick={() => setMode('DEGRADED')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                mode === 'DEGRADED'
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>DEGRADED</span>
+            </button>
+
+            <button
+              onClick={() => setMode('NO_DATA')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                mode === 'NO_DATA'
+                  ? 'bg-rose-500 text-slate-950 font-bold shadow-md shadow-rose-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <WifiOff className="w-3.5 h-3.5" />
+              <span>NO DATA</span>
+            </button>
+          </div>
+
+          <button
+            onClick={handleRefresh}
+            title="Reload System Telemetry"
+            className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-400 hover:border-slate-700 flex items-center justify-center transition-colors"
           >
-            <option value="CLOUD" className="bg-slate-900 text-cyan-400">CLOUD MODE</option>
-            <option value="LOCAL_EDGE" className="bg-slate-900 text-emerald-400">LOCAL EDGE ACTIVE</option>
-            <option value="DEGRADED" className="bg-slate-900 text-amber-400">DEGRADED DATA</option>
-            <option value="NO_DATA" className="bg-slate-900 text-rose-400">NO DATA MODE</option>
-          </select>
+            <RotateCw className="w-4 h-4" />
+          </button>
         </div>
+      </div>
+
+      {/* Row 2: Horizontal Navigation Tabs */}
+      <div className="h-11 px-6 bg-[#070B14] border-t border-slate-800/80 flex items-center space-x-8 text-xs font-bold font-mono">
+        <button
+          onClick={() => setActiveTab('map')}
+          className={`h-full flex items-center space-x-2 border-b-2 transition-all ${
+            activeTab === 'map'
+              ? 'border-cyan-400 text-cyan-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Map className="w-4 h-4" />
+          <span>LIVE MAP</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('simulation')}
+          className={`h-full flex items-center space-x-2 border-b-2 transition-all ${
+            activeTab === 'simulation'
+              ? 'border-cyan-400 text-cyan-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          <span>SIMULATION</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('response')}
+          className={`h-full flex items-center space-x-2 border-b-2 transition-all ${
+            activeTab === 'response'
+              ? 'border-cyan-400 text-cyan-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4" />
+          <span>INCIDENT COMMAND</span>
+          {activeAlertsCount > 0 && (
+            <span className="bg-rose-500 text-white font-bold text-[10px] px-1.5 py-0.2 rounded-full">
+              {activeAlertsCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('sensors')}
+          className={`h-full flex items-center space-x-2 border-b-2 transition-all ${
+            activeTab === 'sensors'
+              ? 'border-cyan-400 text-cyan-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Radio className="w-4 h-4" />
+          <span>SENSOR NETWORK</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('admin')}
+          className={`h-full flex items-center space-x-2 border-b-2 transition-all ${
+            activeTab === 'admin'
+              ? 'border-cyan-400 text-cyan-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Settings className="w-4 h-4" />
+          <span>ADMIN HOTSPOTS</span>
+        </button>
       </div>
     </header>
   );

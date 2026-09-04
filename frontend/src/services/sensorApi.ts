@@ -1,30 +1,80 @@
 import { Sensor } from '../types';
-import { INITIAL_SENSORS } from '../mock/sensors';
 
 export interface SensorApi {
   getSensors(): Promise<Sensor[]>;
   getSensorById(id: string): Promise<Sensor | null>;
   updateSensorStatus(id: string, status: Sensor['status']): Promise<Sensor>;
+  ingestReading(sensorId: string, readings: Record<string, number>): Promise<any>;
 }
 
-class MockSensorApi implements SensorApi {
-  private sensors: Sensor[] = [...INITIAL_SENSORS];
+class BackendSensorApi implements SensorApi {
+  private baseUrl = 'http://localhost:8000/api/v1';
 
   async getSensors(): Promise<Sensor[]> {
-    return Promise.resolve([...this.sensors]);
+    try {
+      const res = await fetch(`${this.baseUrl}/sensors`);
+      if (res.ok) {
+        const data = await res.json();
+        return (data || []).map((s: any) => {
+          let primaryHazard: 'FLOOD' | 'HEAT' | 'LANDSLIDE' | 'STORM' = 'FLOOD';
+          if (s.type === 'PRESSURE') primaryHazard = 'STORM';
+          else if (s.type === 'SOIL_MOISTURE') primaryHazard = 'LANDSLIDE';
+          else if (s.type === 'MULTI' && (s.readings?.temperature || 0) > 35) primaryHazard = 'HEAT';
+
+          return {
+            id: s.sensorId || s.id,
+            name: s.name,
+            code: s.sensorId || s.id,
+            locationName: s.name,
+            coordinates: [s.latitude, s.longitude] as [number, number],
+            status: (s.status || 'ONLINE') as any,
+            primaryHazard: primaryHazard,
+            telemetry: {
+              timestamp: s.timestamp || new Date().toISOString(),
+              temperature: s.readings?.temperature ?? 28,
+              humidity: s.readings?.humidity ?? 60,
+              rainfall: s.readings?.rainfall ?? 0,
+              pressure: s.readings?.pressure ?? 1012,
+              windSpeed: s.readings?.windSpeed ?? 12,
+              waterLevel: s.readings?.water_level_m ? s.readings.water_level_m * 100 : 20,
+              soilMoisture: s.readings?.soil_moisture ? s.readings.soil_moisture * 100 : 30,
+              battery: 98,
+              signalStrength: 95,
+              dataQuality: Math.round((s.qualityScore ?? 1.0) * 100)
+            },
+            history: [],
+            lastUpdate: s.timestamp || new Date().toISOString(),
+            anomalyDetected: s.anomaly !== 'NORMAL',
+            anomalyType: s.anomaly,
+            assignedHotspotIds: []
+          };
+        });
+      }
+    } catch (e) {
+      console.warn('Backend sensors unavailable, falling back', e);
+    }
+    return [];
   }
 
   async getSensorById(id: string): Promise<Sensor | null> {
-    const found = this.sensors.find(s => s.id === id);
-    return Promise.resolve(found ? { ...found } : null);
+    const sensors = await this.getSensors();
+    return sensors.find(s => s.id === id) || null;
   }
 
   async updateSensorStatus(id: string, status: Sensor['status']): Promise<Sensor> {
-    const index = this.sensors.findIndex(s => s.id === id);
-    if (index === -1) throw new Error(`Sensor ${id} not found`);
-    this.sensors[index] = { ...this.sensors[index], status };
-    return Promise.resolve({ ...this.sensors[index] });
+    const sensor = await this.getSensorById(id);
+    if (!sensor) throw new Error(`Sensor ${id} not found`);
+    return { ...sensor, status };
+  }
+
+  async ingestReading(sensorId: string, readings: Record<string, number>): Promise<any> {
+    const res = await fetch(`${this.baseUrl}/sensors/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sensor_id: sensorId, readings })
+    });
+    return res.json();
   }
 }
 
-export const sensorApi: SensorApi = new MockSensorApi();
+export const sensorApi: SensorApi = new BackendSensorApi();

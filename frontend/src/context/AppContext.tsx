@@ -166,8 +166,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // System mode change
-  const setMode = (newMode: SystemMode) => {
+  const setMode = async (newMode: SystemMode) => {
     setModeState(newMode);
+    try {
+      await fetch('http://localhost:8000/api/v1/mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: newMode })
+      });
+    } catch (e) {
+      console.warn('Could not sync mode to backend', e);
+    }
     refreshRiskAssessment(sensors, newMode, hotspots, riskAreas);
   };
 

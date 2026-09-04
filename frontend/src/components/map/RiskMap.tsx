@@ -1,176 +1,152 @@
 import React, { useState } from 'react';
-import { MapContainer, TileLayer, Polygon, Marker, Popup, useMap, Polyline, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Marker, Popup, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import { useApp } from '../../context/AppContext';
-import { RiskArea, Sensor, Infrastructure, Shelter, CitizenReport, HazardType } from '../../types';
-import { Layers, ShieldAlert, Cpu, Building2, Home, UserCheck } from 'lucide-react';
+import { RiskArea } from '../../types';
+import { Filter } from 'lucide-react';
 
-// Custom Leaflet Icons using SVG Data URIs
-const createMarkerIcon = (color: string, label: string) => {
+// Custom pulsing radar dot for sensors/hotspots
+const createRadarIcon = (color: string) => {
   return L.divIcon({
-    className: 'custom-leaflet-icon',
+    className: 'radar-marker-icon',
     html: `
-      <div style="
-        background-color: ${color};
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: 0 0 10px ${color};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 11px;
-        font-family: monospace;
-      ">
-        ${label}
+      <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+        <div style="position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 2px dashed ${color}; opacity: 0.85; animation: ping 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+        <div style="width: 14px; height: 14px; border-radius: 50%; background-color: ${color}; border: 2px solid white; box-shadow: 0 0 12px ${color};"></div>
       </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14]
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
   });
-};
-
-const sensorIcon = createMarkerIcon('#06B6D4', 'S');
-const infraIcon = createMarkerIcon('#3B82F6', 'H');
-const shelterIcon = createMarkerIcon('#10B981', 'S');
-const reportIcon = createMarkerIcon('#F59E0B', '!');
-
-
-const MapClickHandler = () => {
-  const { setRouteOrigin, setRouteDestination, routeOrigin, routeDestination, routingActive } = useApp();
-  useMapEvents({
-    click(e) {
-      if (!routingActive) return;
-      if (!routeOrigin) {
-        setRouteOrigin([e.latlng.lat, e.latlng.lng]);
-      } else if (!routeDestination) {
-        setRouteDestination([e.latlng.lat, e.latlng.lng]);
-      } else {
-        setRouteOrigin([e.latlng.lat, e.latlng.lng]);
-        setRouteDestination(null);
-      }
-    }
-  });
-  return null;
 };
 
 export const RiskMap: React.FC = () => {
   const {
     riskAreas,
     sensors,
-    infrastructure,
-    shelters,
-    citizenReports,
-    selectedZone,
+    hotspots,
+    assessment,
     setSelectedZone,
-    setSelectedSensor,
-    setSelectedInfra,
-    setSelectedShelter,
-    setSelectedReport,
-    routeOrigin, routeDestination, routeData, routingActive
+    setSelectedSensor
   } = useApp();
 
-  // Layer Toggles
-  const [layers, setLayers] = useState({
-    risk: true,
-    sensors: true,
-    flood: true,
-    heat: true,
-    landslide: true,
-    storm: true,
-    infrastructure: true,
-    shelters: true,
-    reports: true
-  });
-
-  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [hazardFilter, setHazardFilter] = useState<string>('ALL');
 
   // Polygon styling per severity and isPredicted status
   const getPolygonStyle = (area: RiskArea) => {
-    let color = '#10B981'; // LOW
-    if (area.severity === 'CRITICAL') color = '#EF4444';
-    else if (area.severity === 'HIGH') color = '#F97316';
-    else if (area.severity === 'MODERATE') color = '#F59E0B';
+    let color = '#10B981'; // LOW (0-32)
+    if (area.severity === 'CRITICAL' || area.riskScore >= 85) color = '#EF4444'; // CRITICAL
+    else if (area.severity === 'HIGH' || area.riskScore >= 66) color = '#F97316'; // HIGH
+    else if (area.severity === 'MODERATE' || area.riskScore >= 33) color = '#F59E0B'; // MODERATE
 
     return {
       color: color,
-      weight: area.isPredicted ? 3 : 2,
-      dashArray: area.isPredicted ? '8, 8' : undefined, // Dashed for PREDICTED NEXT AFFECTED, Solid for CURRENTLY AFFECTED
+      weight: area.isPredicted ? 3 : 2.5,
+      dashArray: area.isPredicted ? '8, 8' : undefined,
       fillColor: color,
-      fillOpacity: area.isPredicted ? 0.25 : 0.45
+      fillOpacity: area.isPredicted ? 0.35 : 0.55
     };
   };
 
   const filteredAreas = riskAreas.filter(a => {
-    if (!layers.risk) return false;
-    if (a.hazardType === 'FLOOD' && !layers.flood) return false;
-    if (a.hazardType === 'HEAT' && !layers.heat) return false;
-    if (a.hazardType === 'LANDSLIDE' && !layers.landslide) return false;
-    if (a.hazardType === 'STORM' && !layers.storm) return false;
-    return true;
+    if (hazardFilter === 'ALL') return true;
+    return a.hazardType.toUpperCase() === hazardFilter;
   });
 
   return (
-    <div className="relative w-full h-full bg-[#090D16] overflow-hidden">
+    <div className="relative w-full h-full bg-[#070B14] overflow-hidden">
+      {/* Top Overlays: Hazard Filter & Live Dominant Hazard Stats */}
+      <div className="absolute top-4 left-5 right-5 z-[1000] pointer-events-none flex items-center justify-between">
+        {/* Left: Hazard Filter Bar */}
+        <div className="pointer-events-auto bg-[#0A1120]/90 border border-slate-800/90 backdrop-blur-md px-3.5 py-2 rounded-2xl flex items-center space-x-2.5 shadow-2xl">
+          <div className="flex items-center space-x-1.5 text-slate-400 font-mono text-xs font-bold uppercase tracking-wider pr-1">
+            <Filter className="w-3.5 h-3.5 text-cyan-400" />
+            <span>HAZARD FILTER:</span>
+          </div>
+          {(['ALL', 'FLOOD', 'HEAT', 'LANDSLIDE', 'STORM']).map(h => (
+            <button
+              key={h}
+              onClick={() => setHazardFilter(h)}
+              className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all ${
+                hazardFilter === h
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                  : 'bg-slate-900/60 text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              {h}
+            </button>
+          ))}
+        </div>
+
+        {/* Right: Dominant Hazard Scorecard */}
+        <div className="pointer-events-auto bg-[#0A1120]/90 border border-slate-800/90 backdrop-blur-md px-4 py-2 rounded-2xl flex items-center space-x-5 shadow-2xl font-mono text-xs">
+          <div>
+            <span className="text-[10px] text-slate-500 font-bold tracking-wider block uppercase">
+              DOMINANT HAZARD
+            </span>
+            <span className="font-bold text-slate-100 uppercase">
+              {assessment?.hazard || 'FLOOD'}
+            </span>
+          </div>
+
+          <div className="border-l border-slate-800 pl-4">
+            <span className="text-[10px] text-slate-500 font-bold tracking-wider block uppercase">
+              RISK SCORE
+            </span>
+            <span className="font-bold text-amber-400">
+              {assessment?.riskScore || 100} / 100
+            </span>
+          </div>
+
+          <div className="border-l border-slate-800 pl-4">
+            <span className="text-[10px] text-slate-500 font-bold tracking-wider block uppercase">
+              CONFIDENCE
+            </span>
+            <span className="font-bold text-cyan-400">
+              {Math.round((assessment?.confidence || 0.4) * 100)}%
+            </span>
+          </div>
+
+          <div className="border-l border-slate-800 pl-4">
+            <span className="bg-rose-500/20 text-rose-400 border border-rose-500/40 px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider shadow-sm">
+              {assessment?.severity || 'CRITICAL'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Primary Leaflet Map Container */}
       <MapContainer
-        center={[12.9750, 77.5950]}
-        zoom={13}
+        center={[13.0450, 80.2300]}
+        zoom={12}
         scrollWheelZoom={true}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', background: '#070B14' }}
         zoomControl={false}
       >
+        {/* CartoDB Dark Matter Tile Layer (Matches Image 1) */}
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          subdomains={['a', 'b', 'c', 'd']}
           maxZoom={19}
         />
 
-
-        <MapClickHandler />
-        
-        {routeOrigin && <Marker position={routeOrigin as any}><Popup>Route Origin</Popup></Marker>}
-        {routeDestination && <Marker position={routeDestination as any}><Popup>Route Destination</Popup></Marker>}
-        
-        {routeData && routeData.segments && routeData.segments.map((seg: any) => (
-          <Polyline 
-            key={seg.segment_id}
-            positions={seg.geometry.coordinates.map((c:any) => [c[1], c[0]])} 
-            color={
-                seg.overall_risk_level === 'LOW' ? '#22c55e' :
-                seg.overall_risk_level === 'MODERATE' ? '#eab308' :
-                seg.overall_risk_level === 'HIGH' ? '#f97316' : '#ef4444'
-            }
-            weight={8}
-          />
-        ))}
-        
         {/* Spatial Risk Polygons */}
-
         {filteredAreas.map(area => (
           <Polygon
             key={area.id}
             positions={area.geometry.coordinates[0]}
             pathOptions={getPolygonStyle(area)}
             eventHandlers={{
-              click: () => {
-                setSelectedZone(area);
-                setSelectedSensor(null);
-                setSelectedInfra(null);
-                setSelectedShelter(null);
-                setSelectedReport(null);
-              }
+              click: () => setSelectedZone(area)
             }}
           >
-            <Popup>
-              <div className="p-1 space-y-1 font-sans">
+            <Popup className="custom-dark-popup">
+              <div className="p-1 space-y-1 font-sans text-slate-200">
                 <div className="flex items-center justify-between font-bold text-xs">
                   <span>{area.name}</span>
                   <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                    area.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400' :
-                    area.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-400' : 'bg-amber-500/20 text-amber-400'
+                    area.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
+                    area.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
                   }`}>
                     {area.severity}
                   </span>
@@ -186,179 +162,90 @@ export const RiskMap: React.FC = () => {
           </Polygon>
         ))}
 
-        {/* Sensor Markers */}
-        {layers.sensors && sensors.map(sensor => (
-          <Marker
-            key={sensor.id}
-            position={sensor.coordinates}
-            icon={sensorIcon}
-            eventHandlers={{
-              click: () => {
-                setSelectedSensor(sensor);
-                setSelectedZone(null);
-                setSelectedInfra(null);
-                setSelectedShelter(null);
-                setSelectedReport(null);
-              }
-            }}
-          >
-            <Popup>
-              <div className="font-sans text-xs">
-                <div className="font-bold text-slate-100">{sensor.name}</div>
-                <div className="text-slate-400 text-[10px] font-mono">{sensor.code} - {sensor.status}</div>
-                <div className="mt-1 text-[11px] text-cyan-300">
-                  Temp: {sensor.telemetry.temperature}°C | Rain: {sensor.telemetry.rainfall}mm/h | Water: {sensor.telemetry.waterLevel}cm
+        {/* Sensor & Hotspot Radar Markers */}
+        {sensors.map(s => {
+          let dotColor = '#10B981'; // Green default
+          if (s.primaryHazard === 'FLOOD') dotColor = '#3B82F6';
+          else if (s.primaryHazard === 'STORM') dotColor = '#F59E0B';
+          else if (s.primaryHazard === 'HEAT') dotColor = '#EF4444';
+          return (
+            <Marker
+              key={s.id}
+              position={s.coordinates}
+              icon={createRadarIcon(dotColor)}
+              eventHandlers={{
+                click: () => setSelectedSensor(s)
+              }}
+            >
+              <Popup>
+                <div className="font-sans text-xs text-slate-200">
+                  <div className="font-bold text-cyan-400">{s.name}</div>
+                  <div className="text-[11px] text-slate-400">Hazard: {s.primaryHazard} | Status: {s.status}</div>
+                  <div className="text-[10px] font-mono text-emerald-400">Quality: {s.telemetry?.dataQuality || 95}%</div>
                 </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+              </Popup>
+            </Marker>
+          );
+        })}
 
-        {/* Infrastructure Markers */}
-        {layers.infrastructure && infrastructure.map(infra => (
-          <Marker
-            key={infra.id}
-            position={infra.coordinates}
-            icon={infraIcon}
-            eventHandlers={{
-              click: () => {
-                setSelectedInfra(infra);
-                setSelectedZone(null);
-                setSelectedSensor(null);
-                setSelectedShelter(null);
-                setSelectedReport(null);
-              }
-            }}
-          >
-            <Popup>
-              <div className="font-sans text-xs">
-                <div className="font-bold text-blue-400">{infra.name}</div>
-                <div className="text-slate-300 text-[10px]">{infra.type} - Status: {infra.status}</div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-
-        {/* Shelter Markers */}
-        {layers.shelters && shelters.map(shelter => (
-          <Marker
-            key={shelter.id}
-            position={shelter.coordinates}
-            icon={shelterIcon}
-            eventHandlers={{
-              click: () => {
-                setSelectedShelter(shelter);
-                setSelectedZone(null);
-                setSelectedSensor(null);
-                setSelectedInfra(null);
-                setSelectedReport(null);
-              }
-            }}
-          >
-            <Popup>
-              <div className="font-sans text-xs">
-                <div className="font-bold text-emerald-400">{shelter.name}</div>
-                <div className="text-slate-300 text-[10px]">Occupancy: {shelter.occupancy}/{shelter.capacity}</div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-
-        {/* Citizen Report Markers */}
-        {layers.reports && citizenReports.map(report => (
-          <Marker
-            key={report.id}
-            position={report.coordinates}
-            icon={reportIcon}
-            eventHandlers={{
-              click: () => {
-                setSelectedReport(report);
-                setSelectedZone(null);
-                setSelectedSensor(null);
-                setSelectedInfra(null);
-                setSelectedShelter(null);
-              }
-            }}
-          >
-            <Popup>
-              <div className="font-sans text-xs">
-                <div className="font-bold text-amber-400">{report.type}</div>
-                <div className="text-slate-300 text-[10px]">{report.description}</div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {/* Registered Vulnerability Hotspots */}
+        {hotspots.map(h => {
+          const coords = h.geometry?.coordinates?.[0]?.[0] || [13.0, 80.2];
+          return (
+            <CircleMarker
+              key={h.id}
+              center={[coords[0], coords[1]]}
+              radius={18}
+              pathOptions={{
+                color: '#EF4444',
+                dashArray: '4, 4',
+                fillColor: '#EF4444',
+                fillOpacity: 0.25,
+                weight: 2
+              }}
+            >
+              <Popup>
+                <div className="font-sans text-xs">
+                  <div className="font-bold text-red-400">{h.name}</div>
+                  <div className="text-[11px] text-slate-300">Hazard: {h.hazardType} | Baseline: {h.baselineRisk}</div>
+                </div>
+              </Popup>
+            </CircleMarker>
+          );
+        })}
       </MapContainer>
 
-      {/* Floating Layer Control Button & Panel */}
-      <div className="absolute top-4 right-4 z-[1000]">
-        <button
-          onClick={() => setShowLayerPanel(!showLayerPanel)}
-          className="bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 p-2.5 rounded-lg shadow-xl flex items-center space-x-2 text-xs font-semibold"
-        >
-          <Layers className="w-4 h-4 text-cyan-400" />
-          <span>MAP LAYERS</span>
-        </button>
-
-        {showLayerPanel && (
-          <div className="mt-2 w-64 bg-slate-900/95 border border-slate-700/80 rounded-xl p-3.5 shadow-2xl backdrop-blur text-xs space-y-2 text-slate-200">
-            <div className="font-mono font-bold text-slate-400 uppercase tracking-wider text-[10px] pb-1 border-b border-slate-800">
-              Active Map Layers
-            </div>
-            {[
-              { id: 'risk', label: 'Spatial Risk Zones' },
-              { id: 'sensors', label: 'IoT Sensor Stations' },
-              { id: 'flood', label: 'Flood Hazards' },
-              { id: 'heat', label: 'Heat Micro-zones' },
-              { id: 'landslide', label: 'Landslide Slopes' },
-              { id: 'storm', label: 'Storm Corridors' },
-              { id: 'infrastructure', label: 'Critical Infrastructure' },
-              { id: 'shelters', label: 'Evacuation Shelters' },
-              { id: 'reports', label: 'Citizen Reports' }
-            ].map(item => (
-              <label key={item.id} className="flex items-center space-x-2.5 cursor-pointer hover:text-cyan-400">
-                <input
-                  type="checkbox"
-                  checked={(layers as any)[item.id]}
-                  onChange={e => setLayers({ ...layers, [item.id]: e.target.checked })}
-                  className="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-0"
-                />
-                <span>{item.label}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Floating Spatial Risk Legend */}
-      <div className="absolute bottom-4 left-4 z-[1000] bg-slate-900/90 border border-slate-800 p-3 rounded-xl shadow-2xl text-[11px] font-mono space-y-2 backdrop-blur">
-        <div className="text-slate-400 font-bold uppercase text-[10px]">Risk Severity Legend</div>
-        <div className="grid grid-cols-2 gap-2">
+      {/* Floating Bottom-Left Risk Severity Scale (Matches Image 1) */}
+      <div className="absolute bottom-6 left-6 z-[1000] bg-[#0A1120]/95 border border-slate-800/90 p-4 rounded-2xl shadow-2xl backdrop-blur-md text-xs font-mono select-none">
+        <div className="text-slate-400 font-bold uppercase text-[10px] tracking-wider mb-3">
+          RISK SEVERITY SCALE
+        </div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[11px]">
           <div className="flex items-center space-x-2">
-            <span className="w-3 h-3 rounded bg-red-500"></span>
-            <span className="text-slate-200">CRITICAL (75-100)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] shadow-sm shadow-emerald-500/50"></span>
+            <span className="text-slate-300">LOW (0 - 32)</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="w-3 h-3 rounded bg-orange-500"></span>
-            <span className="text-slate-200">HIGH (50-74)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B] shadow-sm shadow-amber-500/50"></span>
+            <span className="text-slate-300">MODERATE (33 - 65)</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="w-3 h-3 rounded bg-amber-500"></span>
-            <span className="text-slate-200">MODERATE (25-49)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#F97316] shadow-sm shadow-orange-500/50"></span>
+            <span className="text-slate-300">HIGH (66 - 84)</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="w-3 h-3 rounded bg-emerald-500"></span>
-            <span className="text-slate-200">LOW (0-24)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444] shadow-sm shadow-red-500/50"></span>
+            <span className="text-slate-300">CRITICAL (85+)</span>
           </div>
         </div>
-        <div className="pt-2 border-t border-slate-800 flex items-center space-x-4 text-[10px]">
-          <div className="flex items-center space-x-1.5">
-            <span className="w-4 h-0.5 bg-cyan-400 inline-block"></span>
-            <span className="text-slate-300">CURRENT (Solid)</span>
+        <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center space-x-5 text-[10px] text-slate-400">
+          <div className="flex items-center space-x-2">
+            <span className="w-5 h-0.5 bg-cyan-400 inline-block"></span>
+            <span>Current Area (Solid)</span>
           </div>
-          <div className="flex items-center space-x-1.5">
-            <span className="w-4 h-0.5 border-b-2 border-dashed border-cyan-400 inline-block"></span>
-            <span className="text-slate-300">PREDICTED (Dashed)</span>
+          <div className="flex items-center space-x-2">
+            <span className="w-5 h-0.5 border-b-2 border-dashed border-cyan-400 inline-block"></span>
+            <span>Predicted Next (Dashed)</span>
           </div>
         </div>
       </div>

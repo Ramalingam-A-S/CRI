@@ -1,24 +1,26 @@
-import { SimulationState, SimulationConfig } from '../types';
+import { SimulationConfig } from '../types';
 
 export interface SimulationApi {
-  getSimulationState(): Promise<SimulationState>;
+  triggerSimulation(config: Partial<SimulationConfig>): Promise<any>;
+  resetSimulation(): Promise<any>;
 }
 
-class MockSimulationApi implements SimulationApi {
-  private state: SimulationState = {
-    active: false,
-    paused: false,
-    currentStep: 0,
-    totalSteps: 100,
-    config: null,
-    speed: '1x',
-    elapsedMinutes: 0,
-    logs: ['Simulation engine initialized and idle.']
-  };
+class BackendSimulationApi implements SimulationApi {
+  async triggerSimulation(config: any): Promise<any> {
+    const res = await fetch('http://localhost:8000/api/simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config || { hazard: 'FLOOD', intensity: 1.5 })
+    });
+    return res.json();
+  }
 
-  async getSimulationState(): Promise<SimulationState> {
-    return Promise.resolve({ ...this.state });
+  async resetSimulation(): Promise<any> {
+    const res = await fetch('http://localhost:8000/api/reset-simulation', {
+      method: 'POST'
+    });
+    return res.json();
   }
 }
 
-export const simulationApi: SimulationApi = new MockSimulationApi();
+export const simulationApi: SimulationApi = new BackendSimulationApi();
