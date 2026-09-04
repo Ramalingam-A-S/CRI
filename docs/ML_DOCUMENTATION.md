@@ -203,16 +203,14 @@ CRI incorporates a fault-tolerant operating mode state machine ensuring resilien
 
 ---
 
-## 7. Hyperlocal Spatial Zones (Chennai Benchmark Region)
+## 7. Hyperlocal Spatial Zones (Sadasiva Sankarapuram Sector)
 
-The model evaluates spatial polygons anchored to Chennai's most critical hydrological and topographical vulnerabilities:
+The model evaluates spatial polygons anchored to Sadasiva Sankarapuram and Nagalapuram Hills (`13.3860° N, 79.7980° E`, Tirupati District):
 
-1. **Velachery Drainage Corridor & Underpass** (`12.9780° N, 80.2210° E`): Low-elevation urban basin prone to rapid sub-surface water accumulation.
-2. **Perungudi Marshland Basin** (`12.9600° N, 80.2380° E`): Coastal wetland sink sensitive to tidal surges.
-3. **Guindy Industrial Heat Corridor** (`13.0060° N, 80.2020° E`): High-density asphalt heat island.
-4. **T. Nagar Commercial Belt** (`13.0380° N, 80.2280° E`): High-footfall urban corridor.
-5. **St. Thomas Mount Ridge Slope** (`13.0040° N, 80.1940° E`): Steep terrain susceptible to rain-induced slope destabilization.
-6. **Marina Beach Coastal Front** (`13.0475° N, 80.2824° E`): Exposed coastal front vulnerable to cyclone pressure surges.
+1. **Western Ridge Landslide Zone** (`13.3860° N, 79.7500° E`): High-elevation mountain terrain (Elev: 508.4m, Slope: 34.1°) prone to severe rain-induced slope failure and debris flow.
+2. **Eastern Lowland Flood Basin** (`13.3860° N, 79.8400° E`): Low-lying agricultural and drainage depression (Elev: 59.9m, Slope: 1.8°) sensitive to rapid floodwater inundation.
+3. **Sankarapuram Infrastructure Corridor** (`13.3840° N, 79.7970° E`): Critical municipal power substation and emergency shelter corridor.
+4. **Nagalapuram Town Center** (`13.3850° N, 79.7990° E`): Primary community disaster relief shelter and civil defense hub.
 
 ---
 
@@ -222,3 +220,11 @@ The machine learning suite includes end-to-end automated verification scripts:
 - `ml_training/verify_model.py`: Validates model loading, schema alignment, and zero-NaN inference bounds.
 - `backend/tests/test_phase2_backend.py`: Evaluates risk scoring, mode switches, and factor extraction across 32 unit tests (**32/32 PASS**).
 - `backend/tests/test_phase4_e2e_acceptance.py`: Validates complete end-to-end simulation propagation from REST invocation to hazard alert triggers.
+
+---
+
+## 9. Mathematical Equations & Parameter Reference
+
+For the comprehensive mathematical equations, feature derivations, Haversine spherical trigonometric formulas, and physical constants used in CRI machine learning, see:
+👉 **[`docs/ML_PARAMETERS_AND_EQUATIONS.md`](file:///d:/Aracnids/docs/ML_PARAMETERS_AND_EQUATIONS.md)**.
+

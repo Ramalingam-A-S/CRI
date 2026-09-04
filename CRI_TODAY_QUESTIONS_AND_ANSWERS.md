@@ -2022,3 +2022,29 @@ _Execution completed autonomously (code modifications, tests, and builds verifie
 *Tools & subsystems utilized during this step:* `run_command, write_to_file, view_file`
 
 ---
+
+
+## Question 35
+**Local Time:** 2026-09-04T13:10:42+05:30 | **Topic:** Machine Learning Parameters & Mathematical Equations
+
+### 👤 User Prompt / Question
+`
+Give me all the parameters used in ML for prediction and also give what are the equations used for those calculation and prediction
+`
+
+### 🤖 Assistant Answer / Response
+Detailed breakdown of all input parameters and mathematical formulations across the CRI ML architecture:
+1. **Directional Hazard Propagation Model (HistGradientBoostingRegressor)**:
+   - Features: ngular_diff, distance_km, compatibility_score, 
+ainfall, wind_speed, 	errain_slope.
+   - Equations: Great Circle forward azimuth, Haversine ellipsoidal surface distance, angular downwind alignment, exponential distance decay ( = 5.0$ km), topographic slope compatibility, and advective ETA.
+2. **Micro-Zone Multi-Hazard Risk Scoring (hazard_models.py)**:
+   - Flood, Landslide, Storm, and Heat risk formulas with worst-hazard anchored severity.
+3. **IoT Sensor Quality Index & Anomaly Attenuation (nomaly_detection.py)**:
+   - Physical boundary bounds and missing feature penalization ({	ext{sensor}} \in [0.10, 1.00]$).
+4. **Multi-Target Synoptic Weather Predictor (weather_model.joblib)**:
+   - Harmonic cyclical date encodings and multi-station synoptic regression.
+
+*Detailed standalone reference published to:* docs/ML_PARAMETERS_AND_EQUATIONS.md.
+
+---
