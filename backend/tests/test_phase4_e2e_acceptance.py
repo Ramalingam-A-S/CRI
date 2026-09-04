@@ -94,10 +94,14 @@ class TestPhase4E2EAcceptance:
 
     def test_06_sensor_telemetry_ingestion(self):
         sensors_before = httpx.get(f"{BASE_URL}/v1/sensors").json()
+        if len(sensors_before) == 0:
+            httpx.post(f"{BASE_URL}/v1/sensors", json={"name": "Acceptance Telemetry Node", "lat": 13.386, "lng": 79.798})
+            sensors_before = httpx.get(f"{BASE_URL}/v1/sensors").json()
         assert len(sensors_before) > 0
 
+        target_id = sensors_before[0]["id"]
         ingest_payload = {
-            "sensor_id": "sns_velachery_01",
+            "sensor_id": target_id,
             "readings": {"temperature": 180.0, "rainfall": 95.0}
         }
         r = httpx.post(f"{BASE_URL}/v1/sensors/ingest", json=ingest_payload)
@@ -112,8 +116,8 @@ class TestPhase4E2EAcceptance:
             "hazard": "FLOOD",
             "severity": "CRITICAL",
             "baselineRiskScore": 90,
-            "latitude": 12.9800,
-            "longitude": 80.2200,
+            "latitude": 13.3860,
+            "longitude": 79.7980,
             "radius_m": 600,
             "active": True,
             "notes": "Automated phase 4 acceptance test hotspot"
@@ -137,10 +141,10 @@ class TestPhase4E2EAcceptance:
             "title": "Submerged Railway Underpass",
             "hazard": "FLOOD",
             "severity": "HIGH",
-            "latitude": 12.9750,
-            "longitude": 80.2220,
+            "latitude": 13.3860,
+            "longitude": 79.7980,
             "reporter": "Field Command Test Officer",
-            "description": "3 feet of standing water blocking emergency vehicles"
+            "description": "Standing water blocking emergency access"
         }
         r = httpx.post(f"{BASE_URL}/v1/incidents", json=new_inc)
         assert r.status_code == 201
@@ -161,6 +165,15 @@ class TestPhase4E2EAcceptance:
         assert "criticalLevel" in inf[0]
 
     def test_10_hazard_filter_spatial_areas_integrity(self):
+        # In single-region platform, populate sample hotspots for each hazard type if needed
+        for haz in ["FLOOD", "HEAT", "LANDSLIDE", "STORM"]:
+            httpx.post(f"{BASE_URL}/v1/hotspots", json={
+                "name": f"Acceptance {haz} Hotspot",
+                "hazard": haz,
+                "latitude": 13.3860,
+                "longitude": 79.7980
+            })
+
         r = httpx.get(f"{BASE_URL}/v1/risk/assessment")
         assert r.status_code == 200
         data = r.json()
@@ -184,3 +197,40 @@ class TestPhase4E2EAcceptance:
             assert len(filtered_pred) > 0, f"Filtering by {haz} returned 0 predicted areas"
             assert all(a["hazardType"].upper() == haz for a in filtered_curr)
             assert all(a["hazardType"].upper() == haz for a in filtered_pred)
+
+    def test_11_directional_propagation_e2e(self):
+        # Create sensor and directional hotspots
+        s_res = httpx.post(f"{BASE_URL}/sensors", json={
+            "name": "E2E Field Sensor",
+            "lat": 13.3860,
+            "lng": 79.7980
+        }).json()
+        s_id = s_res["id"]
+
+        httpx.post(f"{BASE_URL}/hotspots", json={
+            "name": "Western Landslide Target",
+            "latitude": 13.3860,
+            "longitude": 79.7500,
+            "hazardTag": "landslide"
+        })
+
+        # Wind from east (90 deg) blows toward west (270 deg)
+        sim_payload = {
+            "eventType": "heavy_rain",
+            "sensorId": s_id,
+            "dataPoints": {
+                "rainfallMmHr": 80.0,
+                "windSpeedKmh": 50.0,
+                "windDirectionDeg": 90.0
+            }
+        }
+        res = httpx.post(f"{BASE_URL}/simulate/run", json=sim_payload)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "SUCCESS"
+        assert len(data["rankedCandidates"]) > 0
+        top = data["rankedCandidates"][0]
+        assert top["hazardTag"] == "landslide"
+        assert top["probability"] > 50.0
+        assert "cone" in top
+

@@ -30,3 +30,5 @@ frontend/dist-ssr/
 ehthumbs.db
 Thumbs.db
 data/
+backend/data/*.db
+*.db

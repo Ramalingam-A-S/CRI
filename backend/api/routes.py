@@ -147,3 +147,14 @@ def analyze_route(req: RouteRequest):
             {"type": "ELEVATION", "source": "Local DEM Pseudo-Hash", "status": "DERIVED"}
         ]
     }
+
+@router.get("/weather/live")
+def get_live_weather(lat: Optional[float] = 13.386, lon: Optional[float] = 79.798):
+    """
+    Returns current live atmospheric conditions via the active WeatherProvider
+    (IMDProvider if IMD_API_KEY is configured, else OpenMeteoProvider fallback).
+    """
+    from core.weather_provider import active_weather_provider
+    weather = active_weather_provider.get_current_weather(lat, lon)
+    return weather
+

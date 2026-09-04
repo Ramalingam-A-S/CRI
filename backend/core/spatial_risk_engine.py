@@ -18,6 +18,7 @@ from core.sensor_store import SensorStore
 from core.hotspot_store import HotspotStore
 from core.alert_engine import AlertEngine
 from core.weather_predictor import WeatherPredictor
+from core.terrain import get_terrain_profile
 
 class SpatialRiskEngine:
     _instance = None
@@ -104,12 +105,13 @@ class SpatialRiskEngine:
             "pressure": env_state.get("pressure", 1012.0)
         }
 
-        # Representative geospatial feature profile for local risk center
+        # Representative geospatial feature profile for local risk center (Sadasiva Sankarapuram)
+        elev, slope = get_terrain_profile(13.386, 79.798)
         geo_features = {
-            "elevation": 5.0,
-            "slope": 3.0,
-            "water_proximity": 150.0,
-            "historical_susceptibility": 0.75
+            "elevation": elev,
+            "slope": slope,
+            "water_proximity": 1200.0,
+            "historical_susceptibility": 0.25
         }
 
         # --- RUN HAZARD MODELS ---
@@ -134,6 +136,7 @@ class SpatialRiskEngine:
         for hs in hotspots:
             if hs.get("active") and hs.get("hazard") == dominant_hazard:
                 hotspot_boost += (hs.get("baselineRiskScore", 50) * 0.15)
+        hotspot_boost = min(25.0, hotspot_boost)
 
         # Compute sensor quality multiplier
         sensor_quality = self.sensor_store.calculate_average_quality()
@@ -197,9 +200,9 @@ class SpatialRiskEngine:
                 severity=final_severity,
                 risk_score=final_risk_score,
                 confidence=final_confidence,
-                location_name=current_areas[0]["name"] if current_areas else "Primary Local Zone",
-                lat=current_areas[0]["center"][0] if current_areas else 12.9780,
-                lng=current_areas[0]["center"][1] if current_areas else 80.2210,
+                location_name=current_areas[0]["name"] if current_areas else "Sadasiva Sankarapuram Command Sector",
+                lat=current_areas[0]["center"][0] if current_areas else 13.3860,
+                lng=current_areas[0]["center"][1] if current_areas else 79.7980,
                 reason=f"Elevated {dominant_hazard} risk score ({final_risk_score:.1f}) in {final_severity} severity bracket under {op_mode.value} mode.",
                 mode=op_mode.value
             )
@@ -213,97 +216,40 @@ class SpatialRiskEngine:
         overall_confidence: float,
         weather: Dict[str, float]
     ) -> List[Dict[str, Any]]:
-        areas = []
-        hazard_specs = {
-            "FLOOD": [
-                {
-                    "id": "zone-current-velachery-flood",
-                    "name": "Velachery Drainage Corridor & Underpass",
-                    "coords": [[12.9780, 80.2210], [12.9850, 80.2260], [12.9750, 80.2350], [12.9690, 80.2280], [12.9780, 80.2210]],
-                    "center": [12.9768, 80.2275],
-                    "base_pop": 18500
-                },
-                {
-                    "id": "zone-current-perungudi-flood",
-                    "name": "Perungudi Low Marshland Basin",
-                    "coords": [[12.9600, 80.2380], [12.9680, 80.2450], [12.9580, 80.2520], [12.9520, 80.2420], [12.9600, 80.2380]],
-                    "center": [12.9595, 80.2442],
-                    "base_pop": 12100
-                }
-            ],
-            "HEAT": [
-                {
-                    "id": "zone-current-guindy-heat",
-                    "name": "Guindy Industrial Heat Island Corridor",
-                    "coords": [[13.0060, 80.2020], [13.0120, 80.2150], [13.0020, 80.2220], [12.9960, 80.2080], [13.0060, 80.2020]],
-                    "center": [13.0040, 80.2118],
-                    "base_pop": 21000
-                },
-                {
-                    "id": "zone-current-tnagar-heat",
-                    "name": "T. Nagar High-Density Commercial Belt",
-                    "coords": [[13.0380, 80.2280], [13.0450, 80.2380], [13.0350, 80.2450], [13.0280, 80.2340], [13.0380, 80.2280]],
-                    "center": [13.0365, 80.2362],
-                    "base_pop": 34000
-                }
-            ],
-            "LANDSLIDE": [
-                {
-                    "id": "zone-current-stthomas-landslide",
-                    "name": "St. Thomas Mount Ridge Slope",
-                    "coords": [[12.9920, 80.1980], [13.0000, 80.2050], [12.9900, 80.2120], [12.9820, 80.2020], [12.9920, 80.1980]],
-                    "center": [12.9910, 80.2042],
-                    "base_pop": 8900
-                },
-                {
-                    "id": "zone-current-pallavaram-landslide",
-                    "name": "Pallavaram Quarry Escarpment Cut",
-                    "coords": [[12.9700, 80.1780], [12.9780, 80.1850], [12.9680, 80.1920], [12.9600, 80.1820], [12.9700, 80.1780]],
-                    "center": [12.9690, 80.1842],
-                    "base_pop": 6400
-                }
-            ],
-            "STORM": [
-                {
-                    "id": "zone-current-marina-storm",
-                    "name": "Marina Beach Coastal Surge Front",
-                    "coords": [[13.0480, 80.2780], [13.0600, 80.2850], [13.0450, 80.2920], [13.0350, 80.2820], [13.0480, 80.2780]],
-                    "center": [13.0470, 80.2842],
-                    "base_pop": 29000
-                },
-                {
-                    "id": "zone-current-foreshore-storm",
-                    "name": "Foreshore Estate Harbor Exposure Belt",
-                    "coords": [[13.0250, 80.2720], [13.0350, 80.2790], [13.0220, 80.2860], [13.0150, 80.2760], [13.0250, 80.2720]],
-                    "center": [13.0242, 80.2782],
-                    "base_pop": 16500
-                }
-            ]
-        }
+        hotspots = self.hotspot_store.get_all_hotspots()
+        if not hotspots:
+            return []
 
-        for haz_key, specs in hazard_specs.items():
-            res = hazard_results.get(haz_key, {})
-            score = res.get("riskScore", 0.0)
+        areas = []
+        for hs in hotspots:
+            haz_key = hs.get("hazard", "FLOOD").upper()
+            if haz_key == "HEATWAVE":
+                haz_key = "HEAT"
+            elif haz_key == "HEAVY_RAIN":
+                haz_key = "STORM"
+            
+            res = hazard_results.get(haz_key, hazard_results.get("FLOOD", {}))
+            score = res.get("riskScore", 50.0)
             sev = res.get("severity", get_risk_level(score))
             conf = res.get("confidence", overall_confidence)
             
-            for spec in specs:
-                areas.append({
-                    "id": spec["id"],
-                    "name": spec["name"],
-                    "hazardType": haz_key,
-                    "riskScore": round(score, 1),
-                    "severity": sev,
-                    "confidence": round(conf, 2),
-                    "isPredicted": False,
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [spec["coords"]]
-                    },
-                    "center": spec["center"],
-                    "lastUpdated": datetime.now(timezone.utc).isoformat(),
-                    "affectedPopulationEstimate": spec["base_pop"] if sev in ["HIGH", "CRITICAL"] else int(spec["base_pop"] * 0.25)
-                })
+            geom = hs.get("geometry", {})
+            coords = geom.get("coordinates", [[]]) if isinstance(geom, dict) else [[]]
+
+            areas.append({
+                "id": f"zone-current-{hs['id']}",
+                "hotspotId": hs["id"],
+                "name": hs["name"],
+                "hazardType": haz_key,
+                "riskScore": round(score, 1),
+                "severity": sev,
+                "confidence": round(conf, 2),
+                "isPredicted": False,
+                "geometry": geom if isinstance(geom, dict) else {"type": "Polygon", "coordinates": coords},
+                "center": hs.get("centroid", [13.386, 79.798]),
+                "lastUpdated": datetime.now(timezone.utc).isoformat(),
+                "affectedPopulationEstimate": 2500 if sev in ["HIGH", "CRITICAL"] else 800
+            })
         return areas
 
     def _build_predicted_affected_areas(
@@ -313,74 +259,42 @@ class SpatialRiskEngine:
         overall_confidence: float,
         weather: Dict[str, float]
     ) -> List[Dict[str, Any]]:
-        areas = []
-        pred_specs = {
-            "FLOOD": [
-                {
-                    "id": "zone-pred-madipakkam-flood",
-                    "name": "Madipakkam Downstream Overflow Basin",
-                    "coords": [[12.9650, 80.1980], [12.9730, 80.2050], [12.9620, 80.2150], [12.9550, 80.2050], [12.9650, 80.1980]],
-                    "center": [12.9638, 80.2058],
-                    "horizon": 180,
-                    "base_pop": 24000
-                }
-            ],
-            "HEAT": [
-                {
-                    "id": "zone-pred-saidapet-heat",
-                    "name": "Saidapet Canopy Thermal Expansion Sector",
-                    "coords": [[13.0200, 80.2150], [13.0280, 80.2250], [13.0180, 80.2320], [13.0100, 80.2220], [13.0200, 80.2150]],
-                    "center": [13.0190, 80.2235],
-                    "horizon": 120,
-                    "base_pop": 19500
-                }
-            ],
-            "LANDSLIDE": [
-                {
-                    "id": "zone-pred-chromepet-landslide",
-                    "name": "Chromepet Foothill Instability Front",
-                    "coords": [[12.9500, 80.1450], [12.9580, 80.1550], [12.9480, 80.1620], [12.9400, 80.1500], [12.9500, 80.1450]],
-                    "center": [12.9490, 80.1530],
-                    "horizon": 240,
-                    "base_pop": 11200
-                }
-            ],
-            "STORM": [
-                {
-                    "id": "zone-pred-royapuram-storm",
-                    "name": "Royapuram Port Surge Inundation Front",
-                    "coords": [[13.1050, 80.2880], [13.1180, 80.2950], [13.1020, 80.3020], [13.0950, 80.2920], [13.1050, 80.2880]],
-                    "center": [13.1050, 80.2942],
-                    "horizon": 180,
-                    "base_pop": 31000
-                }
-            ]
-        }
+        hotspots = self.hotspot_store.get_all_hotspots()
+        if not hotspots:
+            return []
 
-        for haz_key, specs in pred_specs.items():
-            res = hazard_results.get(haz_key, {})
-            score = res.get("riskScore", 0.0)
-            pred_score = min(100.0, score * 1.15) if score > 40 else score * 0.8
+        areas = []
+        for hs in hotspots:
+            haz_key = hs.get("hazard", "FLOOD").upper()
+            if haz_key == "HEATWAVE":
+                haz_key = "HEAT"
+            elif haz_key == "HEAVY_RAIN":
+                haz_key = "STORM"
+
+            res = hazard_results.get(haz_key, hazard_results.get("FLOOD", {}))
+            score = res.get("riskScore", 50.0)
+            pred_score = min(100.0, score * 1.15) if score > 40 else score * 0.85
             pred_sev = get_risk_level(pred_score)
             conf = res.get("confidence", overall_confidence) * 0.85
-            
-            for spec in specs:
-                areas.append({
-                    "id": spec["id"],
-                    "name": spec["name"],
-                    "hazardType": haz_key,
-                    "riskScore": round(pred_score, 1),
-                    "severity": pred_sev,
-                    "confidence": round(conf, 2),
-                    "isPredicted": True,
-                    "timeHorizonMinutes": spec["horizon"],
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [spec["coords"]]
-                    },
-                    "center": spec["center"],
-                    "lastUpdated": datetime.now(timezone.utc).isoformat(),
-                    "affectedPopulationEstimate": spec["base_pop"] if pred_sev in ["HIGH", "CRITICAL"] else int(spec["base_pop"] * 0.25)
-                })
+
+            geom = hs.get("geometry", {})
+            coords = geom.get("coordinates", [[]]) if isinstance(geom, dict) else [[]]
+
+            areas.append({
+                "id": f"zone-pred-{hs['id']}",
+                "hotspotId": hs["id"],
+                "name": f"Projected Hazard Extension: {hs['name']}",
+                "hazardType": haz_key,
+                "riskScore": round(pred_score, 1),
+                "severity": pred_sev,
+                "confidence": round(conf, 2),
+                "isPredicted": True,
+                "timeHorizonMinutes": 120,
+                "geometry": geom if isinstance(geom, dict) else {"type": "Polygon", "coordinates": coords},
+                "center": hs.get("centroid", [13.386, 79.798]),
+                "lastUpdated": datetime.now(timezone.utc).isoformat(),
+                "affectedPopulationEstimate": 4500 if pred_sev in ["HIGH", "CRITICAL"] else 1200
+            })
         return areas
+
 

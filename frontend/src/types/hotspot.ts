@@ -18,6 +18,10 @@ export interface HazardHotspot {
   sensorIds: string[];
   active: boolean;
   notes?: string;
+  elevation?: number;
+  slope?: number;
+  centroid?: [number, number];
   createdAt: string;
   updatedAt: string;
 }
+

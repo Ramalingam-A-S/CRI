@@ -18,6 +18,8 @@ from core.hotspot_store import HotspotStore
 from core.alert_engine import AlertEngine
 from core.spatial_risk_engine import SpatialRiskEngine
 
+from core.db import get_db_connection
+
 class TestPhase2Backend(unittest.TestCase):
 
     def setUp(self):
@@ -25,6 +27,11 @@ class TestPhase2Backend(unittest.TestCase):
         self.spatial_engine = SpatialRiskEngine.get_instance()
         self.spatial_engine.reset_simulation()
         self.spatial_engine.set_operating_mode("CLOUD")
+        conn = get_db_connection()
+        conn.execute("DELETE FROM hotspots")
+        conn.execute("DELETE FROM sensors")
+        conn.commit()
+        conn.close()
 
     # A & B. Backend startup & Health Endpoint
     def test_A_B_health_endpoint(self):
@@ -120,12 +127,18 @@ class TestPhase2Backend(unittest.TestCase):
 
     # M & N & O. Sensors Ingestion, Anomalies & Quality Penalties
     def test_M_N_O_sensors_ingestion_anomalies(self):
+        # Create a test sensor first in the zero-state database
+        self.client.post("/api/v1/sensors", json={
+            "name": "Test Monitoring Node",
+            "lat": 13.3860,
+            "lng": 79.7980
+        })
         sensors = self.client.get("/api/v1/sensors").json()
         self.assertTrue(len(sensors) > 0)
 
         # Ingest invalid reading (anomalous temperature 180°C)
         ingest_res = self.client.post("/api/v1/sensors/ingest", json={
-            "sensor_id": "sns_test_01",
+            "sensor_id": sensors[0]["id"],
             "readings": {"temperature": 180.0, "humidity": 50.0}
         }).json()
 
@@ -191,6 +204,13 @@ class TestPhase2Backend(unittest.TestCase):
 
     # V. Current vs Predicted Areas Separation
     def test_V_current_vs_predicted_areas(self):
+        # Create sample user hotspot in the dynamic store
+        hs = HotspotStore.get_instance().create_hotspot({
+            "name": "Sadasiva Ridge Hotspot",
+            "latitude": 13.3860,
+            "longitude": 79.7980,
+            "hazard": "FLOOD"
+        })
         res = self.spatial_engine.evaluate_risk(mode="CLOUD")
         current = res.get("currentAreas", [])
         predicted = res.get("predictedAreas", [])
@@ -207,5 +227,52 @@ class TestPhase2Backend(unittest.TestCase):
         for key in required_keys:
             self.assertIn(key, res)
 
+    # X. Directional Propagation Prediction (Task 7)
+    def test_X_directional_propagation_prediction(self):
+        s_res = self.client.post("/api/sensors", json={
+            "name": "Central Nagalapuram Sensor",
+            "lat": 13.3860,
+            "lng": 79.7980
+        }).json()
+        s_id = s_res["id"]
+
+        # Hotspot 1: Landslide to the west on ridge
+        self.client.post("/api/hotspots", json={
+            "name": "Western Ridge Landslide Zone",
+            "latitude": 13.3860,
+            "longitude": 79.7500,
+            "hazardTag": "landslide"
+        })
+
+        # Hotspot 2: Flood to the east on lowland plain
+        self.client.post("/api/hotspots", json={
+            "name": "Eastern Lowland Flood Basin",
+            "latitude": 13.3860,
+            "longitude": 79.8400,
+            "hazardTag": "flood"
+        })
+
+        # Wind blowing from East (90 deg) toward West (270 deg) -> points at western ridge!
+        sim_res = self.client.post("/api/simulate/run", json={
+            "eventType": "heavy_rain",
+            "sensorId": s_id,
+            "dataPoints": {
+                "rainfallMmHr": 75.0,
+                "windSpeedKmh": 45.0,
+                "windDirectionDeg": 90.0
+            },
+            "mode": "CLOUD"
+        })
+        self.assertEqual(sim_res.status_code, 200)
+        data = sim_res.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        ranked = data["rankedCandidates"]
+        self.assertTrue(len(ranked) > 0)
+        top = ranked[0]
+        self.assertEqual(top["hazardTag"], "landslide")
+        self.assertGreater(top["probability"], 50.0)
+        self.assertTrue(len(top["factors"]) > 0)
+
 if __name__ == "__main__":
     unittest.main()
+

@@ -169,17 +169,90 @@ def run_verification():
     assert avg_latency_ms < 100.0, f"Latency {avg_latency_ms:.2f} ms exceeds 100 ms threshold"
 
     print("\n" + "=" * 70)
-    print(">>> VERIFICATION RESULT: ALL 7 TEST SUITES PASSED (Exit Code 0) <<<")
+    print(">>> VERIFICATION RESULT: WEATHER PREDICTION SUITES PASSED <<<")
     print("=" * 70)
     return True
 
+def verify_propagation_model():
+    print("\n" + "=" * 70)
+    print("Directional Hazard-Propagation Model Acceptance Verification")
+    print("=" * 70)
+
+    import joblib
+    model_path = os.path.join(CURRENT_DIR, "propagation_model.joblib")
+    meta_path = os.path.join(CURRENT_DIR, "propagation_metadata.json")
+
+    print(f"\n[PROPAGATION TEST 1] Loading Artifact from {model_path}...")
+    assert os.path.exists(model_path), f"Missing artifact: {model_path}"
+    model = joblib.load(model_path)
+    assert model is not None, "Failed to deserialize propagation_model.joblib"
+    print(f"  -> Model successfully loaded: {type(model).__name__}")
+
+    print("\n[PROPAGATION TEST 2] Validating Metadata & Feature Schema...")
+    assert os.path.exists(meta_path), f"Missing metadata: {meta_path}"
+    with open(meta_path, "r", encoding="utf-8") as f:
+        meta = json.load(f)
+    features = meta["features"]
+    assert len(features) == 6, f"Expected 6 features, got {len(features)}"
+    expected_features = ["angular_diff", "distance_km", "compatibility_score", "rainfall", "wind_speed", "terrain_slope"]
+    assert features == expected_features, f"Feature mismatch: {features} vs {expected_features}"
+    print(f"  -> Valid feature schema (6 features): {features}")
+
+    print("\n[PROPAGATION TEST 3] Single Dummy Prediction & Bounds Verification...")
+    # Representative downwind candidate: 0 deg diff, 2.5 km away, compat=1.0, rain=60, wind=30, slope=22 deg
+    sample_df = pd.DataFrame([{
+        "angular_diff": 0.0,
+        "distance_km": 2.5,
+        "compatibility_score": 1.0,
+        "rainfall": 60.0,
+        "wind_speed": 30.0,
+        "terrain_slope": 22.0
+    }])
+    pred = model.predict(sample_df)
+    assert len(pred) == 1, f"Expected single prediction, got {len(pred)}"
+    assert not np.isnan(pred[0]), "Prediction contains NaN"
+    assert not np.isinf(pred[0]), "Prediction contains Inf"
+    prob = float(pred[0])
+    print(f"  -> Predicted probability for aligned high-slope scenario: {prob:.2f}%")
+    assert 0.0 <= prob <= 100.0, f"Probability {prob}% out of [0, 100] bounds"
+
+    print("\n[PROPAGATION TEST 4] Batch Inference & Latency Benchmark...")
+    batch_df = pd.DataFrame([
+        {
+            "angular_diff": float(i * 10),
+            "distance_km": float(i * 0.5 + 0.5),
+            "compatibility_score": 1.0 if i % 2 == 0 else 0.2,
+            "rainfall": float(i * 5),
+            "wind_speed": float(i * 3 + 10),
+            "terrain_slope": float(i * 2 + 2)
+        }
+        for i in range(25)
+    ])
+    batch_preds = model.predict(batch_df)
+    assert len(batch_preds) == 25
+    assert not np.isnan(batch_preds).any()
+
+    t0 = time.perf_counter()
+    n_iters = 100
+    for _ in range(n_iters):
+        _ = model.predict(sample_df)
+    avg_ms = ((time.perf_counter() - t0) / n_iters) * 1000.0
+    print(f"  -> Average propagation inference latency: {avg_ms:.2f} ms")
+    assert avg_ms < 20.0, f"Latency {avg_ms:.2f} ms exceeds 20 ms threshold"
+
+    print("\n" + "=" * 70)
+    print(">>> VERIFICATION RESULT: DIRECTIONAL PROPAGATION MODEL PASSED <<<")
+    print("=" * 70)
+    return True
 
 if __name__ == "__main__":
     try:
         run_verification()
+        verify_propagation_model()
         sys.exit(0)
     except Exception as e:
         print(f"\n[FAILED] Verification failed with error: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
         sys.exit(1)
+

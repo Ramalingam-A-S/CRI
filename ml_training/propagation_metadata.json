@@ -1,0 +1,25 @@
+{
+  "model_type": "HistGradientBoostingRegressor",
+  "target": "probability",
+  "features": [
+    "angular_diff",
+    "distance_km",
+    "compatibility_score",
+    "rainfall",
+    "wind_speed",
+    "terrain_slope"
+  ],
+  "n_samples": 15000,
+  "weights": {
+    "alignment": 0.4,
+    "distance": 0.25,
+    "compatibility": 0.25,
+    "intensity": 0.1
+  },
+  "decay_d0_km": 5.0,
+  "metrics": {
+    "rmse": 1.3067,
+    "mae": 1.0322,
+    "r2": 0.9957
+  }
+}

@@ -157,15 +157,21 @@ def predict_landslide(weather_features: Dict[str, float], geo_features: Dict[str
     score = min(100.0, max(0.0, score))
     return {"riskScore": round(score, 1), "severity": get_risk_level(score), "confidence": 0.50 if mode == OperatingMode.CLOUD else 0.30, "factors": factors}
 
-def predict_storm(weather_features: Dict[str, float], geo_features: Dict[str, float], mode: OperatingMode = OperatingMode.CLOUD) -> Dict[str, Any]:
+def predict_heavy_rain(weather_features: Dict[str, float], geo_features: Dict[str, float], mode: OperatingMode = OperatingMode.CLOUD) -> Dict[str, Any]:
+    """
+    Evaluates heavy rain / convective storm risk combining high precipitation intensity,
+    wind dynamics, and slope/drainage factors.
+    """
     if mode == OperatingMode.NO_DATA: return {"riskScore": 0.0, "severity": RiskLevel.LOW.value, "confidence": 0.0}
     _load_models()
-    wind, pressure = weather_features.get("windSpeed", 0.0), weather_features.get("pressure", 1013.25)
+    rain = weather_features.get("rainfall", 0.0)
+    wind = weather_features.get("windSpeed", 0.0)
+    pressure = weather_features.get("pressure", 1013.25)
     
     if _storm_model and _storm_features:
         input_dict = {
             "windSpeed": wind, "pressure": pressure, "pressure_trend_3h": -2.0,
-            "predicted_rainfall_ml": weather_features.get("rainfall", 0.0),
+            "predicted_rainfall_ml": rain,
             "humidity": weather_features.get("humidity", 70.0),
             "historical_hotspot_risk": geo_features.get("historical_susceptibility", 0.2)
         }
@@ -173,11 +179,15 @@ def predict_storm(weather_features: Dict[str, float], geo_features: Dict[str, fl
         score = float(_storm_model.predict(df)[0])
         factors = extract_factors(_storm_model, _storm_features, df)
     else:
-        score = wind * 2 + (1013 - pressure) * 1.5
-        factors = {"Wind": round(wind, 1), "Pressure": round(pressure, 1)}
+        score = (rain * 1.8) + (wind * 1.2) + max(0.0, (1013 - pressure) * 1.0)
+        factors = {"Rain": round(rain, 1), "Wind": round(wind, 1), "Pressure": round(pressure, 1)}
         
     score = min(100.0, max(0.0, score))
     return {"riskScore": round(score, 1), "severity": get_risk_level(score), "confidence": 0.50 if mode == OperatingMode.CLOUD else 0.30, "factors": factors}
+
+# Explicit alias for backward compatibility with existing tests and modules
+predict_storm = predict_heavy_rain
+
 
 def risk_fusion(hazard_predictions: Dict[str, Dict[str, Any]], sensor_quality: float = 1.0) -> Dict[str, Any]:
     scores = [haz["riskScore"] for haz in hazard_predictions.values()]

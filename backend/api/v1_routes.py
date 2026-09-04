@@ -1,8 +1,8 @@
 """
-backend/api/v1_routes.py - Authoritative Primary API Endpoint Routes for CRI
+backend/api/v1_routes.py - Hotspots, Sensors, Alerts, and Operating Mode API Routes
 """
-from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, Query, Path, status
+from typing import Optional, Dict, Any, List
+from fastapi import APIRouter, HTTPException, status, Query, Path
 from pydantic import BaseModel, Field
 
 from core.spatial_risk_engine import SpatialRiskEngine
@@ -10,9 +10,10 @@ from core.sensor_store import SensorStore
 from core.hotspot_store import HotspotStore
 from core.alert_engine import AlertEngine
 from core.incident_command import IncidentCommand
-from ml.hazard_models import OperatingMode
+
 
 v1_router = APIRouter(prefix="/api/v1")
+api_router = APIRouter(prefix="/api")
 
 # --- REQUEST SCHEMAS ---
 class ModeRequest(BaseModel):
@@ -22,22 +23,54 @@ class SensorIngestRequest(BaseModel):
     sensor_id: str
     readings: Dict[str, float]
 
+class SensorCreateRequest(BaseModel):
+    name: Optional[str] = Field("Sensor", description="Sensor human name")
+    lat: Optional[float] = Field(None, description="Latitude")
+    lng: Optional[float] = Field(None, description="Longitude")
+    latitude: Optional[float] = Field(None, description="Latitude alias")
+    longitude: Optional[float] = Field(None, description="Longitude alias")
+    readings: Optional[Dict[str, float]] = None
+    unit: Optional[str] = "°C"
+    temperature: Optional[float] = None
+    humidity: Optional[float] = None
+    wind_speed: Optional[float] = None
+    wind_direction: Optional[float] = None
+    rainfall_rate: Optional[float] = None
+    pressure: Optional[float] = None
+
+class SensorUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    readings: Optional[Dict[str, float]] = None
+    unit: Optional[str] = None
+
 class HotspotCreateRequest(BaseModel):
-    name: str
-    latitude: float
-    longitude: float
-    hazard: str = "FLOOD"
-    severity: str = "HIGH"
-    baselineRiskScore: int = 70
-    radius_m: int = 500
-    active: bool = True
-    notes: Optional[str] = "Admin defined hotspot"
+    name: Optional[str] = None
+    title: Optional[str] = None
+    hazardTag: Optional[str] = None
+    primaryTag: Optional[str] = None
+    hazard: Optional[str] = "FLOOD"
+    geometry: Optional[Dict[str, Any]] = None
+    polygon: Optional[List[Any]] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    severity: Optional[str] = "HIGH"
+    baselineRiskScore: Optional[int] = 70
+    radius_m: Optional[int] = 500
+    active: Optional[bool] = True
+    notes: Optional[str] = ""
+    description: Optional[str] = ""
 
 class HotspotUpdateRequest(BaseModel):
     name: Optional[str] = None
+    hazardTag: Optional[str] = None
+    hazard: Optional[str] = None
+    geometry: Optional[Dict[str, Any]] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    hazard: Optional[str] = None
     severity: Optional[str] = None
     baselineRiskScore: Optional[int] = None
     radius_m: Optional[int] = None
@@ -46,43 +79,26 @@ class HotspotUpdateRequest(BaseModel):
 
 class IncidentCreateRequest(BaseModel):
     title: str
-    hazard: str
-    severity: str = "MODERATE"
+    hazard: str = "FLOOD"
+    severity: str = "HIGH"
     latitude: float
     longitude: float
-    reporter: Optional[str] = "Citizen Report"
-    description: Optional[str] = "No description provided"
+    reporter: str = "Anonymous Citizen"
+    description: str = ""
 
 
-# --- OPERATING MODE ROUTES ---
-@v1_router.get("/mode")
-def get_mode():
+# --- SHARED ROUTE IMPLEMENTATIONS ---
+
+def _set_mode(req: ModeRequest):
     engine = SpatialRiskEngine.get_instance()
-    return {"mode": engine.current_operating_mode}
+    new_mode = engine.set_operating_mode(req.mode)
+    return {"status": "success", "mode": new_mode}
 
-@v1_router.post("/mode")
-def set_mode(req: ModeRequest):
-    valid_modes = [m.value for m in OperatingMode]
-    mode_str = req.mode.upper()
-    if mode_str not in valid_modes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid operating mode '{req.mode}'. Allowed modes: {valid_modes}"
-        )
+def _get_assessment(mode: Optional[str] = None):
     engine = SpatialRiskEngine.get_instance()
-    new_mode = engine.set_operating_mode(mode_str)
-    return {"mode": new_mode, "status": "updated"}
+    return engine.evaluate_risk(mode=mode)
 
-
-# --- RISK ASSESSMENT ROUTES ---
-@v1_router.get("/risk/assessment")
-def get_risk_assessment(mode: Optional[str] = Query(None, description="Override mode (CLOUD, LOCAL_EDGE, DEGRADED, NO_DATA)")):
-    engine = SpatialRiskEngine.get_instance()
-    assessment = engine.evaluate_risk(mode=mode)
-    return assessment
-
-@v1_router.get("/risk/map")
-def get_risk_map(mode: Optional[str] = Query(None)):
+def _get_risk_map(mode: Optional[str] = None):
     engine = SpatialRiskEngine.get_instance()
     assessment = engine.evaluate_risk(mode=mode)
     return {
@@ -92,90 +108,141 @@ def get_risk_map(mode: Optional[str] = Query(None)):
         "predictedAreas": assessment.get("predictedAreas", [])
     }
 
+def _get_sensors():
+    return SensorStore.get_instance().get_all_sensors()
 
-# --- SENSOR NETWORK ROUTES ---
-@v1_router.get("/sensors")
-def get_sensors():
+def _create_sensor(req: SensorCreateRequest):
     store = SensorStore.get_instance()
-    return store.get_all_sensors()
+    payload = req.model_dump() if hasattr(req, "model_dump") else req.dict()
+    # Resolve coordinate aliases
+    if payload.get("lat") is None and payload.get("latitude") is not None:
+        payload["lat"] = payload["latitude"]
+    if payload.get("lng") is None and payload.get("longitude") is not None:
+        payload["lng"] = payload["longitude"]
+    # If flat readings were passed, bundle into readings dict
+    readings = payload.get("readings") or {}
+    for k in ["temperature", "humidity", "wind_speed", "wind_direction", "rainfall_rate", "pressure"]:
+        if payload.get(k) is not None and k not in readings:
+            readings[k] = payload[k]
+    if readings:
+        payload["readings"] = readings
+    created = store.create_sensor(payload)
+    return created
 
-@v1_router.get("/sensors/{sensor_id}")
-def get_sensor_by_id(sensor_id: str = Path(...)):
+def _get_sensor_by_id(sensor_id: str):
     store = SensorStore.get_instance()
     sensor = store.get_sensor(sensor_id)
     if not sensor:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Sensor '{sensor_id}' not found.")
     return sensor
 
-@v1_router.post("/sensors/ingest")
-def ingest_sensor_reading(req: SensorIngestRequest):
+def _update_sensor(sensor_id: str, req: SensorUpdateRequest):
+    store = SensorStore.get_instance()
+    payload = req.model_dump(exclude_unset=True) if hasattr(req, "model_dump") else req.dict(exclude_unset=True)
+    if payload.get("lat") is None and payload.get("latitude") is not None:
+        payload["lat"] = payload["latitude"]
+    if payload.get("lng") is None and payload.get("longitude") is not None:
+        payload["lng"] = payload["longitude"]
+    updated = store.update_sensor(sensor_id, payload)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Sensor '{sensor_id}' not found.")
+    return updated
+
+def _delete_sensor(sensor_id: str):
+    store = SensorStore.get_instance()
+    deleted = store.delete_sensor(sensor_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Sensor '{sensor_id}' not found.")
+    return {"status": "deleted", "id": sensor_id}
+
+def _ingest_reading(req: SensorIngestRequest):
     if not req.readings:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Readings dictionary cannot be empty.")
     store = SensorStore.get_instance()
     updated = store.ingest_reading(req.sensor_id, req.readings)
     return {"status": "ingested", "sensor": updated}
 
+def _get_hotspots():
+    return HotspotStore.get_instance().get_all_hotspots()
 
-# --- HOTSPOT MANAGEMENT ROUTES ---
-@v1_router.get("/hotspots")
-def get_hotspots():
+def _create_hotspot(req: HotspotCreateRequest):
     store = HotspotStore.get_instance()
-    return store.get_all_hotspots()
-
-@v1_router.post("/hotspots", status_code=status.HTTP_201_CREATED)
-def create_hotspot(req: HotspotCreateRequest):
-    store = HotspotStore.get_instance()
-    created = store.create_hotspot(req.dict())
+    payload = req.model_dump() if hasattr(req, "model_dump") else req.dict()
+    if not payload.get("name") and payload.get("title"):
+        payload["name"] = payload["title"]
+    elif not payload.get("name"):
+        payload["name"] = "Custom Hotspot"
+    if not payload.get("hazardTag") and payload.get("primaryTag"):
+        payload["hazardTag"] = payload["primaryTag"]
+    if not payload.get("notes") and payload.get("description"):
+        payload["notes"] = payload["description"]
+    if not payload.get("geometry") and payload.get("polygon"):
+        poly = payload["polygon"]
+        if poly and poly[0] != poly[-1]:
+            poly = poly + [poly[0]]
+        payload["geometry"] = {
+            "type": "Polygon",
+            "coordinates": [poly]
+        }
+    created = store.create_hotspot(payload)
     return created
 
-@v1_router.put("/hotspots/{hotspot_id}")
-def update_hotspot(hotspot_id: str, req: HotspotUpdateRequest):
+def _update_hotspot(hotspot_id: str, req: HotspotUpdateRequest):
     store = HotspotStore.get_instance()
-    updated = store.update_hotspot(hotspot_id, req.dict())
+    payload = req.model_dump(exclude_unset=True) if hasattr(req, "model_dump") else req.dict(exclude_unset=True)
+    updated = store.update_hotspot(hotspot_id, payload)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hotspot '{hotspot_id}' not found.")
     return updated
 
-@v1_router.delete("/hotspots/{hotspot_id}")
-def delete_hotspot(hotspot_id: str):
+def _delete_hotspot(hotspot_id: str):
     store = HotspotStore.get_instance()
     deleted = store.delete_hotspot(hotspot_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hotspot '{hotspot_id}' not found.")
     return {"status": "deleted", "id": hotspot_id}
 
+def _get_alerts(status_filter: Optional[str] = None):
+    return AlertEngine.get_instance().get_all_alerts(status_filter=status_filter)
 
-# --- ALERTS & INCIDENT COMMAND ROUTES ---
-@v1_router.get("/alerts")
-def get_alerts(status_filter: Optional[str] = Query(None, alias="status")):
-    engine = AlertEngine.get_instance()
-    return engine.get_all_alerts(status_filter=status_filter)
-
-@v1_router.post("/alerts/acknowledge/{alert_id}")
-def acknowledge_alert(alert_id: str):
-    engine = AlertEngine.get_instance()
-    ack = engine.acknowledge_alert(alert_id)
+def _acknowledge_alert(alert_id: str):
+    ack = AlertEngine.get_instance().acknowledge_alert(alert_id)
     if not ack:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Alert '{alert_id}' not found.")
     return ack
 
-@v1_router.get("/shelters")
-def get_shelters():
-    cmd = IncidentCommand.get_instance()
-    return cmd.get_all_shelters()
 
-@v1_router.get("/infrastructure")
-def get_infrastructure():
-    cmd = IncidentCommand.get_instance()
-    return cmd.get_all_infrastructure()
+# --- BIND TO BOTH /api/v1 AND /api FOR FULL CLIENT & TEST COMPATIBILITY ---
 
-@v1_router.get("/incidents")
-def get_incidents():
+def _create_incident(req: IncidentCreateRequest):
     cmd = IncidentCommand.get_instance()
-    return cmd.get_all_incidents()
+    payload = req.model_dump() if hasattr(req, "model_dump") else req.dict()
+    return cmd.create_incident(payload)
 
-@v1_router.post("/incidents", status_code=status.HTTP_201_CREATED)
-def create_incident(req: IncidentCreateRequest):
-    cmd = IncidentCommand.get_instance()
-    created = cmd.create_incident(req.dict())
-    return created
+for r in [v1_router, api_router]:
+    r.add_api_route("/mode", _set_mode, methods=["POST"])
+    r.add_api_route("/risk/assessment", _get_assessment, methods=["GET"])
+    r.add_api_route("/risk/map", _get_risk_map, methods=["GET"])
+
+    r.add_api_route("/sensors", _get_sensors, methods=["GET"])
+    r.add_api_route("/sensors", _create_sensor, methods=["POST"], status_code=status.HTTP_201_CREATED)
+    r.add_api_route("/sensors/{sensor_id}", _get_sensor_by_id, methods=["GET"])
+    r.add_api_route("/sensors/{sensor_id}", _update_sensor, methods=["PUT"])
+    r.add_api_route("/sensors/{sensor_id}", _delete_sensor, methods=["DELETE"])
+    r.add_api_route("/sensors/ingest", _ingest_reading, methods=["POST"])
+
+    r.add_api_route("/hotspots", _get_hotspots, methods=["GET"])
+    r.add_api_route("/hotspots", _create_hotspot, methods=["POST"], status_code=status.HTTP_201_CREATED)
+    r.add_api_route("/hotspots/{hotspot_id}", _update_hotspot, methods=["PUT"])
+    r.add_api_route("/hotspots/{hotspot_id}", _delete_hotspot, methods=["DELETE"])
+
+    r.add_api_route("/alerts", _get_alerts, methods=["GET"])
+    r.add_api_route("/alerts/acknowledge/{alert_id}", _acknowledge_alert, methods=["POST"])
+
+    r.add_api_route("/incidents", lambda: IncidentCommand.get_instance().get_all_incidents(), methods=["GET"])
+    r.add_api_route("/incidents", _create_incident, methods=["POST"], status_code=status.HTTP_201_CREATED)
+
+    r.add_api_route("/shelters", lambda: IncidentCommand.get_instance().get_all_shelters(), methods=["GET"])
+    r.add_api_route("/infrastructure", lambda: IncidentCommand.get_instance().get_all_infrastructure(), methods=["GET"])
+
+

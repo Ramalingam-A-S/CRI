@@ -5,12 +5,40 @@ import unittest
 from fastapi.testclient import TestClient
 from main import app
 
+from core.db import get_db_connection
+
 class TestDemoSequence(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(app)
         # Reset simulation back to baseline before test
         self.client.post("/api/reset-simulation")
+        conn = get_db_connection()
+        conn.execute("DELETE FROM hotspots")
+        conn.execute("DELETE FROM sensors")
+        conn.commit()
+        conn.close()
+        # Ensure a test hotspot and sensor exist for the demo test
+        self.hs = self.client.post("/api/hotspots", json={
+            "name": "Demo Flood Plain",
+            "hazardTag": "flood",
+            "latitude": 13.386,
+            "longitude": 79.798,
+            "severity": "HIGH",
+            "baselineRiskScore": 50
+        }).json()
+        self.sensor = self.client.post("/api/sensors", json={
+            "name": "Demo Weather Node",
+            "lat": 13.386,
+            "lng": 79.798,
+            "readings": {"rainfall": 0.0, "wind_speed": 10.0, "temperature": 28.0, "humidity": 65.0}
+        }).json()
+
+    def tearDown(self):
+        if hasattr(self, "hs") and "id" in self.hs:
+            self.client.delete(f"/api/hotspots/{self.hs['id']}")
+        if hasattr(self, "sensor") and "id" in self.sensor:
+            self.client.delete(f"/api/sensors/{self.sensor['id']}")
 
     def test_full_demo_sequence(self):
         print("\n" + "=" * 70)

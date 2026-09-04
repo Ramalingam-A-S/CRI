@@ -1,93 +1,19 @@
 """
-backend/core/sensor_store.py - Sensor Network, Telemetry Ingestion & Anomaly Detection
+backend/core/sensor_store.py - SQLite-Backed Dynamic Sensor Network & Telemetry Ingestion
 """
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
-from enum import Enum
-import math
-from ml.anomaly_detection import check_sensor_quality, AnomalyDetector
-
-class SensorStatus(str, Enum):
-    ONLINE = "ONLINE"
-    DEGRADED = "DEGRADED"
-    OFFLINE = "OFFLINE"
-
-class SensorType(str, Enum):
-    RAIN = "RAIN"
-    TEMPERATURE = "TEMPERATURE"
-    HUMIDITY = "HUMIDITY"
-    WATER_LEVEL = "WATER_LEVEL"
-    SOIL_MOISTURE = "SOIL_MOISTURE"
-    WIND_SPEED = "WIND_SPEED"
-    PRESSURE = "PRESSURE"
-    MULTI = "MULTI"
-
-class SensorNode:
-    def __init__(
-        self,
-        sensor_id: str,
-        name: str,
-        sensor_type: str,
-        lat: float,
-        lng: float,
-        readings: Dict[str, float],
-        unit: str = "",
-        is_simulated: bool = True
-    ):
-        self.sensor_id = sensor_id
-        self.name = name
-        self.sensor_type = sensor_type
-        self.latitude = lat
-        self.longitude = lng
-        self.readings = readings
-        self.unit = unit
-        self.is_simulated = is_simulated
-        self.last_updated = datetime.now(timezone.utc).isoformat()
-        self.status = SensorStatus.ONLINE.value
-        self.quality_score = 1.0
-        self.anomalies: List[Dict[str, Any]] = []
-        self.evaluate_health()
-
-    def update_readings(self, new_readings: Dict[str, float]):
-        self.readings.update(new_readings)
-        self.last_updated = datetime.now(timezone.utc).isoformat()
-        self.evaluate_health()
-
-    def evaluate_health(self):
-        quality = check_sensor_quality(self.sensor_id, self.readings)
-        self.quality_score = quality["qualityScore"]
-        self.anomalies = quality["anomalies"]
-        if any(a["severity"] == "CRITICAL" for a in self.anomalies):
-            self.status = SensorStatus.DEGRADED.value
-        else:
-            self.status = SensorStatus.ONLINE.value
-
-    def to_dict(self) -> Dict[str, Any]:
-        primary_val = list(self.readings.values())[0] if self.readings else 0.0
-        return {
-            "sensorId": self.sensor_id,
-            "name": self.name,
-            "type": self.sensor_type,
-            "latitude": self.latitude,
-            "longitude": self.longitude,
-            "value": round(primary_val, 2),
-            "unit": self.unit,
-            "readings": self.readings,
-            "timestamp": self.last_updated,
-            "status": self.status,
-            "health": "ANOMALOUS" if self.anomalies else "HEALTHY",
-            "anomaly": "ANOMALOUS" if self.anomalies else "NORMAL",
-            "qualityScore": self.quality_score,
-            "anomalies": self.anomalies,
-            "isSimulated": self.is_simulated
-        }
+import json
+import uuid
+from core.db import get_db_connection
+from ml.anomaly_detection import check_sensor_quality
 
 class SensorStore:
     _instance = None
 
     def __init__(self):
-        self.sensors: Dict[str, SensorNode] = {}
-        self._init_default_sensors()
+        # Empty initialization - zero pre-seeded records
+        pass
 
     @classmethod
     def get_instance(cls) -> "SensorStore":
@@ -95,112 +21,181 @@ class SensorStore:
             cls._instance = SensorStore()
         return cls._instance
 
-    def _init_default_sensors(self):
-        defaults = [
-            {
-                "sensor_id": "sns_velachery_01",
-                "name": "Velachery River Water Level Sensor",
-                "sensor_type": SensorType.WATER_LEVEL.value,
-                "lat": 12.9780,
-                "lng": 80.2210,
-                "readings": {"water_level_m": 0.4, "rainfall": 0.0, "humidity": 60.0},
-                "unit": "m"
-            },
-            {
-                "sensor_id": "sns_airport_02",
-                "name": "Chennai Airport Weather Station",
-                "sensor_type": SensorType.MULTI.value,
-                "lat": 12.9941,
-                "lng": 80.1709,
-                "readings": {"temperature": 28.0, "humidity": 60.0, "rainfall": 0.0, "windSpeed": 12.0, "pressure": 1012.0},
-                "unit": "°C"
-            },
-            {
-                "sensor_id": "sns_vit_03",
-                "name": "VIT Chennai Campus Environmental Node",
-                "sensor_type": SensorType.MULTI.value,
-                "lat": 12.8406,
-                "lng": 80.1534,
-                "readings": {"temperature": 29.0, "humidity": 55.0, "rainfall": 0.0, "soil_moisture": 0.35, "windSpeed": 10.0},
-                "unit": "°C"
-            },
-            {
-                "sensor_id": "sns_marina_04",
-                "name": "Marina Coastal Storm Pressure Sensor",
-                "sensor_type": SensorType.PRESSURE.value,
-                "lat": 13.0475,
-                "lng": 80.2824,
-                "readings": {"pressure": 1012.0, "windSpeed": 15.0, "humidity": 65.0, "rainfall": 0.0},
-                "unit": "hPa"
-            },
-            {
-                "sensor_id": "sns_stthomas_05",
-                "name": "St. Thomas Mount Slope Stability Sensor",
-                "sensor_type": SensorType.SOIL_MOISTURE.value,
-                "lat": 13.0040,
-                "lng": 80.1940,
-                "readings": {"soil_moisture": 0.30, "slope": 22.0, "rainfall": 0.0},
-                "unit": "ratio"
-            }
-        ]
+    @property
+    def sensors(self) -> Dict[str, Any]:
+        return {s["id"]: s for s in self.get_all_sensors()}
 
-        for d in defaults:
-            node = SensorNode(**d, is_simulated=True)
-            node.evaluate_health()
-            self.sensors[node.sensor_id] = node
 
-    def get_all_sensors(self) -> List[Dict[str, Any]]:
-        return [node.to_dict() for node in self.sensors.values()]
-
-    def get_sensor(self, sensor_id: str) -> Optional[Dict[str, Any]]:
-        if sensor_id in self.sensors:
-            return self.sensors[sensor_id].to_dict()
-        return None
-
-    def ingest_reading(self, sensor_id: str, readings: Dict[str, float]) -> Dict[str, Any]:
-        if sensor_id not in self.sensors:
-            # Create dynamic sensor node
-            node = SensorNode(
-                sensor_id=sensor_id,
-                name=f"Sensor {sensor_id}",
-                sensor_type=SensorType.MULTI.value,
-                lat=12.9716,
-                lng=80.2450,
-                readings=readings,
-                unit="",
-                is_simulated=True
-            )
-            self.sensors[sensor_id] = node
-        else:
-            node = self.sensors[sensor_id]
-            node.update_readings(readings)
-
-        return node.to_dict()
-
-    def get_aggregate_environmental_state(self) -> Dict[str, float]:
-        """Aggregate readings across online sensors."""
-        valid_nodes = [n for n in self.sensors.values() if n.status != SensorStatus.OFFLINE.value]
-        if not valid_nodes:
-            return {"temperature": 28.0, "humidity": 65.0, "rainfall": 0.0, "windSpeed": 10.0, "pressure": 1012.0, "soil_moisture": 0.4}
-
-        temps = [n.readings["temperature"] for n in valid_nodes if "temperature" in n.readings]
-        hums = [n.readings["humidity"] for n in valid_nodes if "humidity" in n.readings]
-        rains = [n.readings["rainfall"] for n in valid_nodes if "rainfall" in n.readings]
-        winds = [n.readings["windSpeed"] for n in valid_nodes if "windSpeed" in n.readings]
-        press = [n.readings["pressure"] for n in valid_nodes if "pressure" in n.readings]
-        soils = [n.readings["soil_moisture"] for n in valid_nodes if "soil_moisture" in n.readings]
-
+    def _row_to_dict(self, row) -> Dict[str, Any]:
+        readings = json.loads(row["readings"]) if isinstance(row["readings"], str) else row["readings"]
+        anomalies = json.loads(row["anomalies"]) if isinstance(row["anomalies"], str) else row["anomalies"]
+        
+        primary_val = list(readings.values())[0] if readings else 0.0
+        
         return {
-            "temperature": float(sum(temps)/len(temps)) if temps else 28.0,
-            "humidity": float(sum(hums)/len(hums)) if hums else 65.0,
-            "rainfall": float(sum(rains)/len(rains)) if rains else 0.0,
-            "windSpeed": float(sum(winds)/len(winds)) if winds else 10.0,
-            "pressure": float(sum(press)/len(press)) if press else 1012.0,
-            "soil_moisture": float(sum(soils)/len(soils)) if soils else 0.4
+            "sensorId": row["id"],
+            "id": row["id"],
+            "name": row["name"],
+            "latitude": float(row["lat"]),
+            "longitude": float(row["lng"]),
+            "lat": float(row["lat"]),
+            "lng": float(row["lng"]),
+            "coordinates": [float(row["lat"]), float(row["lng"])],
+            "value": round(float(primary_val), 2),
+            "unit": row["unit"] or "°C",
+            "readings": readings,
+            "timestamp": row["created_at"],
+            "status": row["status"],
+            "health": "ANOMALOUS" if anomalies else "HEALTHY",
+            "anomaly": "ANOMALOUS" if anomalies else "NORMAL",
+            "qualityScore": float(row["quality_score"]),
+            "anomalies": anomalies,
+            "isSimulated": False,
+            "primaryHazard": "FLOOD"
         }
 
+    def get_all_sensors(self) -> List[Dict[str, Any]]:
+        conn = get_db_connection()
+        rows = conn.execute("SELECT * FROM sensors ORDER BY created_at DESC").fetchall()
+        conn.close()
+        return [self._row_to_dict(r) for r in rows]
+
+    def get_sensor(self, sensor_id: str) -> Optional[Dict[str, Any]]:
+        conn = get_db_connection()
+        row = conn.execute("SELECT * FROM sensors WHERE id = ?", (sensor_id,)).fetchone()
+        conn.close()
+        if not row:
+            return None
+        return self._row_to_dict(row)
+
+    def create_sensor(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        s_id = data.get("id") or data.get("sensor_id") or f"sns_{uuid.uuid4().hex[:8]}"
+        name = data.get("name", "Field Telemetry Sensor")
+        lat = float(data.get("lat") if "lat" in data else data.get("latitude", 13.386))
+        lng = float(data.get("lng") if "lng" in data else data.get("longitude", 79.798))
+
+        readings = data.get("readings") or {
+            "temperature": 28.0,
+            "humidity": 65.0,
+            "rainfall": 0.0,
+            "windSpeed": 12.0,
+            "pressure": 1012.0
+        }
+        unit = data.get("unit") or "°C"
+        created_at = datetime.now(timezone.utc).isoformat()
+
+
+        # Run anomaly / quality check
+        quality = check_sensor_quality(s_id, readings)
+        quality_score = quality["qualityScore"]
+        anomalies = quality["anomalies"]
+        status = "DEGRADED" if any(a.get("severity") == "CRITICAL" for a in anomalies) else "ONLINE"
+
+        conn = get_db_connection()
+        conn.execute("""
+            INSERT INTO sensors (id, name, lat, lng, readings, unit, status, quality_score, anomalies, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (s_id, name, lat, lng, json.dumps(readings), unit, status, quality_score, json.dumps(anomalies), created_at))
+        conn.commit()
+        conn.close()
+
+        return self.get_sensor(s_id)
+
+    def update_sensor(self, sensor_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        current = self.get_sensor(sensor_id)
+        if not current:
+            return None
+
+        name = data.get("name", current["name"])
+        lat = float(data.get("lat") if "lat" in data else data.get("latitude", current["lat"]))
+        lng = float(data.get("lng") if "lng" in data else data.get("longitude", current["lng"]))
+        readings = data.get("readings", current["readings"])
+        unit = data.get("unit", current["unit"])
+
+        quality = check_sensor_quality(sensor_id, readings)
+        quality_score = quality["qualityScore"]
+        anomalies = quality["anomalies"]
+        status = "DEGRADED" if any(a.get("severity") == "CRITICAL" for a in anomalies) else "ONLINE"
+
+        conn = get_db_connection()
+        conn.execute("""
+            UPDATE sensors
+            SET name = ?, lat = ?, lng = ?, readings = ?, unit = ?, status = ?, quality_score = ?, anomalies = ?
+            WHERE id = ?
+        """, (name, lat, lng, json.dumps(readings), unit, status, quality_score, json.dumps(anomalies), sensor_id))
+        conn.commit()
+        conn.close()
+
+        return self.get_sensor(sensor_id)
+
+    def delete_sensor(self, sensor_id: str) -> bool:
+        conn = get_db_connection()
+        cursor = conn.execute("DELETE FROM sensors WHERE id = ?", (sensor_id,))
+        conn.commit()
+        deleted = cursor.rowcount > 0
+        conn.close()
+        return deleted
+
+    def ingest_reading(self, sensor_id: str, new_readings: Dict[str, float]) -> Dict[str, Any]:
+        current = self.get_sensor(sensor_id)
+        if not current:
+            # Create on the fly if not existing yet (helpful for ingest tests)
+            current = self.create_sensor({"id": sensor_id, "name": f"Sensor {sensor_id}", "readings": new_readings})
+            return current
+
+        merged_readings = dict(current["readings"])
+        merged_readings.update(new_readings)
+
+        quality = check_sensor_quality(sensor_id, merged_readings)
+        quality_score = quality["qualityScore"]
+        anomalies = quality["anomalies"]
+        status = "DEGRADED" if any(a.get("severity") == "CRITICAL" for a in anomalies) else "ONLINE"
+
+        conn = get_db_connection()
+        conn.execute("""
+            UPDATE sensors
+            SET readings = ?, status = ?, quality_score = ?, anomalies = ?
+            WHERE id = ?
+        """, (json.dumps(merged_readings), status, quality_score, json.dumps(anomalies), sensor_id))
+        conn.commit()
+        conn.close()
+
+        return self.get_sensor(sensor_id)
+
+    def get_aggregate_environmental_state(self) -> Dict[str, float]:
+        sensors = self.get_all_sensors()
+        if not sensors:
+            return {
+                "temperature": 28.0,
+                "humidity": 65.0,
+                "rainfall": 0.0,
+                "windSpeed": 10.0,
+                "pressure": 1012.0
+            }
+
+        keys = ["temperature", "humidity", "rainfall", "windSpeed", "pressure", "water_level_m", "soil_moisture"]
+        aggregates: Dict[str, float] = {}
+        for k in keys:
+            vals = [s["readings"][k] for s in sensors if k in s.get("readings", {})]
+            if vals:
+                aggregates[k] = round(sum(vals) / len(vals), 2)
+            else:
+                defaults = {"temperature": 28.0, "humidity": 65.0, "rainfall": 0.0, "windSpeed": 10.0, "pressure": 1012.0}
+                if k in defaults:
+                    aggregates[k] = defaults[k]
+
+        return aggregates
+
     def calculate_average_quality(self) -> float:
-        if not self.sensors:
+        sensors = self.get_all_sensors()
+        if not sensors:
             return 1.0
-        scores = [n.quality_score for n in self.sensors.values()]
+        scores = [s.get("qualityScore", 1.0) for s in sensors]
         return round(sum(scores) / len(scores), 2)
+
+    def clear_all(self):
+        """Helper for test suites to reset state."""
+        conn = get_db_connection()
+        conn.execute("DELETE FROM sensors")
+        conn.commit()
+        conn.close()

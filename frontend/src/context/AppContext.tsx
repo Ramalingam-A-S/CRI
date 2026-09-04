@@ -69,8 +69,17 @@ interface AppContextType {
   acknowledgeAlert: (id: string) => void;
   dismissAlert: (id: string) => void;
   
+  // Sensor Actions
+  createSensor: (data: { name: string; lat: number; lng: number }) => Promise<void>;
+  updateSensorPosition: (id: string, lat: number, lng: number) => Promise<void>;
+  deleteSensor: (id: string) => Promise<void>;
+
+  // Directed Simulation State
+  directedResult: any | null;
+  setDirectedResult: (res: any) => void;
+
   // Admin Hotspot Actions
-  createHotspot: (data: Omit<HazardHotspot, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  createHotspot: (data: Partial<HazardHotspot>) => Promise<void>;
   updateHotspot: (id: string, data: Partial<HazardHotspot>) => Promise<void>;
   deleteHotspot: (id: string) => Promise<void>;
   toggleHotspot: (id: string) => Promise<void>;
@@ -82,6 +91,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mode, setModeState] = useState<SystemMode>('CLOUD');
   const [sensors, setSensors] = useState<Sensor[]>([]);
@@ -92,6 +102,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [shelters, setShelters] = useState<Shelter[]>([]);
   const [citizenReports, setCitizenReports] = useState<CitizenReport[]>([]);
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
+  const [directedResult, setDirectedResult] = useState<any | null>(null);
+
 
   const [selectedZone, setSelectedZone] = useState<RiskArea | null>(null);
   const [selectedSensor, setSelectedSensor] = useState<Sensor | null>(null);
@@ -314,12 +326,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Hotspot actions
-  const createHotspot = async (data: Omit<HazardHotspot, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createHotspot = async (data: Partial<HazardHotspot>) => {
     const created = await hotspotApi.createHotspot(data);
     const updated = [...hotspots, created];
     setHotspots(updated);
     refreshRiskAssessment(sensors, mode, updated, riskAreas);
   };
+
 
   const updateHotspot = async (id: string, data: Partial<HazardHotspot>) => {
     const updatedH = await hotspotApi.updateHotspot(id, data);
@@ -352,6 +365,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCitizenReports(prev => prev.map(r => (r.id === id ? updated : r)));
   };
 
+  // Sensor actions
+  const createSensor = async (data: { name: string; lat: number; lng: number }) => {
+    const created = await sensorApi.createSensor(data);
+    setSensors(prev => [...prev, created]);
+    refreshRiskAssessment([...sensors, created], mode, hotspots, riskAreas);
+  };
+
+  const updateSensorPosition = async (id: string, lat: number, lng: number) => {
+    const updated = await sensorApi.updateSensorPosition(id, lat, lng);
+    setSensors(prev => prev.map(s => (s.id === id ? updated : s)));
+  };
+
+  const deleteSensor = async (id: string) => {
+    await sensorApi.deleteSensor(id);
+    setSensors(prev => prev.filter(s => s.id !== id));
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -365,6 +395,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         citizenReports,
         simulation,
         assessment,
+        directedResult,
+        setDirectedResult,
         selectedZone,
         selectedSensor,
         selectedInfra,
@@ -385,6 +417,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSimulationStep,
         acknowledgeAlert,
         dismissAlert,
+        createSensor,
+        updateSensorPosition,
+        deleteSensor,
         createHotspot,
         updateHotspot,
         deleteHotspot,
@@ -397,6 +432,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </AppContext.Provider>
   );
 };
+
 
 export const useApp = () => {
   const context = useContext(AppContext);
