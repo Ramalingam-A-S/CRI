@@ -41,6 +41,7 @@ export const SimulationPage: React.FC = () => {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [liveWeatherLoaded, setLiveWeatherLoaded] = useState<boolean>(false);
+  const [weatherMeta, setWeatherMeta] = useState<any>(null);
 
   // Auto-select first sensor when available
   useEffect(() => {
@@ -60,6 +61,7 @@ export const SimulationPage: React.FC = () => {
         if (data.rainfall !== undefined) setRainfall(Math.round(data.rainfall * 10) / 10);
         if (data.windSpeed !== undefined) setWindSpeed(Math.round(data.windSpeed * 10) / 10);
         if (data.windDirection !== undefined) setWindDirection(Math.round(data.windDirection));
+        setWeatherMeta(data);
         setLiveWeatherLoaded(true);
       }
     } catch (e) {
@@ -212,6 +214,22 @@ export const SimulationPage: React.FC = () => {
                 <span>{liveWeatherLoaded ? 'LIVE WEATHER LOADED' : 'PREFILL LIVE WEATHER'}</span>
               </button>
             </div>
+
+            {/* Live Weather Provider & Status Chip */}
+            {weatherMeta && (
+              <div className="flex items-center justify-between text-[10px] bg-slate-950/80 border border-slate-800 p-2 rounded-xl text-slate-300">
+                <div className="flex items-center space-x-1.5 truncate">
+                  <span className={`w-2 h-2 rounded-full ${weatherMeta.keyActive ? 'bg-emerald-400' : 'bg-cyan-400'} animate-pulse shrink-0`}></span>
+                  <span className="text-emerald-300 font-bold truncate">{weatherMeta.provider || 'Live Weather'}</span>
+                  {weatherMeta.condition && <span className="text-slate-400">({weatherMeta.condition})</span>}
+                </div>
+                {weatherMeta.apiKeyMasked && (
+                  <span className="font-mono text-[9px] text-cyan-300 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800/80 shrink-0 ml-1">
+                    KEY: {weatherMeta.apiKeyMasked}
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Rainfall Slider */}
             <div className={`space-y-1 ${isHeatwave ? 'opacity-30' : ''}`}>
