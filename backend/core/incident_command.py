@@ -44,6 +44,17 @@ class IncidentCommand:
                 "status": "OPEN",
                 "suppliesStatus": "HIGH",
                 "contactNumber": "+91-877-2244-8811"
+            },
+            {
+                "id": "shl_ridge_view_community",
+                "name": "West Foothills Community Hall",
+                "latitude": 13.3820,
+                "longitude": 79.7750,
+                "capacity": 500,
+                "currentOccupancy": 80,
+                "status": "OPEN",
+                "suppliesStatus": "ADEQUATE",
+                "contactNumber": "+91-877-2244-7722"
             }
         ]
         for s in shelters_list:
@@ -70,6 +81,26 @@ class IncidentCommand:
                 "status": "OPERATIONAL",
                 "criticalLevel": "CRITICAL",
                 "hazardExposure": "MULTI"
+            },
+            {
+                "id": "inf_floodway_pumping",
+                "name": "East Sankarapuram Drainage Pumping Station",
+                "type": "PUMPING",
+                "latitude": 13.3835,
+                "longitude": 79.8150,
+                "status": "OPERATIONAL",
+                "criticalLevel": "HIGH",
+                "hazardExposure": "FLOOD"
+            },
+            {
+                "id": "inf_telecom_tower_01",
+                "name": "Nagalapuram Emergency Telecom Repeater Mast",
+                "type": "COMMUNICATION",
+                "latitude": 13.3910,
+                "longitude": 79.7920,
+                "status": "OPERATIONAL",
+                "criticalLevel": "MODERATE",
+                "hazardExposure": "STORM"
             }
         ]
         for inf in infra_list:
@@ -79,15 +110,15 @@ class IncidentCommand:
         inc_list = [
             {
                 "id": "inc_waterlogging_01",
-                "title": "Severe Waterlogging on 100ft Bypass Road",
+                "title": "Severe Waterlogging on Nagalapuram Lowland Pass",
                 "hazard": "FLOOD",
                 "severity": "HIGH",
-                "latitude": 12.9770,
-                "longitude": 80.2220,
+                "latitude": 13.3875,
+                "longitude": 79.7995,
                 "reporter": "Citizen Report #441",
                 "status": "IN_PROGRESS",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "description": "Submerged road section (water level approx 2.5 ft). Vehicles stalled."
+                "description": "Submerged road section (water level approx 2.5 ft) near drainage canal. Vehicles diverted."
             }
         ]
         for inc in inc_list:
@@ -109,8 +140,8 @@ class IncidentCommand:
             "title": data.get("title", "Citizen Reported Hazard Incident"),
             "hazard": data.get("hazard", "FLOOD").upper(),
             "severity": data.get("severity", "MODERATE").upper(),
-            "latitude": float(data.get("latitude", 12.9716)),
-            "longitude": float(data.get("longitude", 80.2450)),
+            "latitude": float(data.get("latitude", 13.3860)),
+            "longitude": float(data.get("longitude", 79.7980)),
             "reporter": data.get("reporter", "Citizen Report"),
             "status": "NEW",
             "timestamp": datetime.now(timezone.utc).isoformat(),
